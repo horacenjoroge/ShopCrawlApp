@@ -328,29 +328,8 @@ const HomeScreen = ({ userEmail }) => {
           ))}
         </ScrollView>
         
-        {/* Additional space at bottom */}
-        <View style={{ height: 100 }} />
+        {/* No extra space needed here since Tab Navigator will add its own spacing */}
       </Animated.ScrollView>
-      
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="home" type="feather" size={24} color="#000" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="bookmark" type="feather" size={24} color="#888" />
-          <Text style={styles.navTextInactive}>Saved</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="clock" type="feather" size={24} color="#888" />
-          <Text style={styles.navTextInactive}>History</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Icon name="award" type="feather" size={24} color="#888" />
-          <Text style={styles.navTextInactive}>Pro</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -528,6 +507,7 @@ const styles = StyleSheet.create({
   dealsScrollContainer: {
     paddingLeft: 15,
     paddingRight: 15,
+    paddingBottom: 20, // Reduced padding at bottom
   },
   discountBadge: {
     position: 'absolute',
@@ -667,30 +647,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 16,
     fontWeight: '500',
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-    height: 60,
-  },
-  navItem: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navText: {
-    color: '#000',
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  navTextInactive: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 4,
-  },
+  }
 });
 
 export default HomeScreen;

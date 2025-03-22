@@ -4,7 +4,7 @@
  * and options to continue with Google, Apple, or Facebook.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { TextInput, Divider, Button } from 'react-native-paper';
 import { Icon } from 'react-native-elements';
@@ -12,6 +12,14 @@ import { useNavigation } from '@react-navigation/native';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSignIn = () => {
+    // Here you would typically validate credentials
+    // For now, we'll just navigate to the Main screen
+    navigation.navigate('Main');
+  };
 
   return (
     <View style={styles.container}>
@@ -30,6 +38,8 @@ const LoginScreen = () => {
         label="Email address"
         mode="outlined"
         style={styles.input}
+        value={email}
+        onChangeText={setEmail}
       />
 
       <TextInput
@@ -37,9 +47,16 @@ const LoginScreen = () => {
         mode="outlined"
         secureTextEntry
         style={styles.input}
+        value={password}
+        onChangeText={setPassword}
       />
 
-      <Button mode="contained" buttonColor="black" style={styles.signInButton}>
+      <Button 
+        mode="contained" 
+        buttonColor="black" 
+        style={styles.signInButton}
+        onPress={handleSignIn}
+      >
         Sign In
       </Button>
 
@@ -54,15 +71,15 @@ const LoginScreen = () => {
       <Text style={styles.orContinueText}>Or continue with</Text>
 
       <View style={styles.iconContainer}>
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={styles.iconButton} onPress={handleSignIn}>
           <Icon name="google" type="font-awesome" size={28} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={styles.iconButton} onPress={handleSignIn}>
           <Icon name="apple" type="font-awesome" size={28} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconButton}>
+        <TouchableOpacity style={styles.iconButton} onPress={handleSignIn}>
           <Icon name="facebook" type="font-awesome" size={28} />
         </TouchableOpacity>
       </View>
