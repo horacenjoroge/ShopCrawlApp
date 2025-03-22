@@ -1,25 +1,23 @@
-import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Provider as PaperProvider } from 'react-native-paper';
-import { ThemeProvider } from '@rneui/themed';
-import HomeScreen from './screens/homescreen'; // Make sure the path is correct
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native';
+import SplashScreen from './src/feature/Screens/WelcomeScreen';
+import HomeScreen from './screens/homescreen'; // Add import for HomeScreen
+import LoginScreen from './src/feature/Screens/LoginScreen';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <PaperProvider>
-      <ThemeProvider>
-        <View style={styles.container}>
-          <HomeScreen />
-          <StatusBar style="auto" />
-        </View>
-      </ThemeProvider>
-    </PaperProvider>
+    <NavigationContainer>
+      <SafeAreaView style={{ flex: 1 }}>
+        <Stack.Navigator initialRouteName="Splash">
+          <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+        </Stack.Navigator>
+      </SafeAreaView>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
