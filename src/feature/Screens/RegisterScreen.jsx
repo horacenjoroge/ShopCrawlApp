@@ -1,6 +1,6 @@
 /**
- * LoginScreen component allows users to sign in or create an account.
- * It provides input fields for email and password, a sign-in button,
+ * RegisterScreen component allows users to create a new account.
+ * It provides input fields for email, password, confirm password,
  * and options to continue with Google, Apple, or Facebook.
  */
 
@@ -10,7 +10,7 @@ import { TextInput, Divider, Button } from 'react-native-paper';
 import { Icon } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
 
-const LoginScreen = () => {
+const RegisterScreen = () => {
   const navigation = useNavigation();
 
   return (
@@ -24,7 +24,7 @@ const LoginScreen = () => {
       </TouchableOpacity>
 
       <Text style={styles.title}>ShopCrawl</Text>
-      <Text style={styles.subtitle}>Sign in or create an account</Text>
+      <Text style={styles.subtitle}>Create an account</Text>
 
       <TextInput
         label="Email address"
@@ -39,14 +39,20 @@ const LoginScreen = () => {
         style={styles.input}
       />
 
+      <TextInput
+        label="Confirm Password"
+        mode="outlined"
+        secureTextEntry
+        style={styles.input}
+      />
+
       <Button mode="contained" buttonColor="black" style={styles.signInButton}>
-        Sign In
+        Register
       </Button>
 
-      {/* Register Button */}
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.registerText}>
-          Don't have an account? <Text style={{ fontWeight: 'bold' }}>Register</Text>
+          Already have an account? <Text style={{ fontWeight: 'bold' }}>Sign In</Text>
         </Text>
       </TouchableOpacity>
 
@@ -126,4 +132,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default RegisterScreen;

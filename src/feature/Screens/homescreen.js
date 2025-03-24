@@ -35,14 +35,14 @@ const deals = [
     originalPrice: '$220',
     discountedPrice: '$150',
     discount: '32% off!',
-    image: require('../assets/amazon.jpg'), // Using existing image paths
+    image: require('../../../assets/amazon.jpg'), // Using existing image paths
     store: 'Amazon',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '2', icon: require('../assets/ebay.jpg') },
-      { id: '3', icon: require('../assets/shopify.jpg') },
-      { id: '4', icon: require('../assets/alibaba.jpg') },
-      { id: '5', icon: require('../assets/amazon.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '2', icon: require('../../../assets/ebay.jpg') },
+      { id: '3', icon: require('../../../assets/shopify.jpg') },
+      { id: '4', icon: require('../../../assets/alibaba.jpg') },
+      { id: '5', icon: require('../../../assets/amazon.jpg') },
     ],
     category: 'Best vacuum cleaner'
   },
@@ -53,11 +53,11 @@ const deals = [
     originalPrice: '$175',
     discountedPrice: '$150',
     discount: '14% off!',
-    image: require('../assets/ebay.jpg'),
+    image: require('../../../assets/ebay.jpg'),
     store: 'Amazon',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '2', icon: require('../assets/ebay.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '2', icon: require('../../../assets/ebay.jpg') },
     ],
     category: 'Best electric knife sharpener'
   },
@@ -68,12 +68,12 @@ const deals = [
     originalPrice: '$199',
     discountedPrice: '$129',
     discount: '35% off!',
-    image: require('../assets/shopify.jpg'),
+    image: require('../../../assets/shopify.jpg'),
     store: 'Shopify',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '2', icon: require('../assets/ebay.jpg') },
-      { id: '3', icon: require('../assets/shopify.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '2', icon: require('../../../assets/ebay.jpg') },
+      { id: '3', icon: require('../../../assets/shopify.jpg') },
     ],
     category: 'Best wireless earbuds'
   },
@@ -84,11 +84,11 @@ const deals = [
     originalPrice: '$120',
     discountedPrice: '$79',
     discount: '25% off!',
-    image: require('../assets/alibaba.jpg'),
+    image: require('../../../assets/alibaba.jpg'),
     store: 'Alibaba',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '4', icon: require('../assets/alibaba.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '4', icon: require('../../../assets/alibaba.jpg') },
     ],
     category: 'Best security cameras'
   }
@@ -187,7 +187,7 @@ const DealCard = ({ item }) => (
       <View style={styles.priceRow}>
         <View style={styles.storeContainer}>
           <Image 
-            source={require('../assets/amazon.jpg')} 
+            source={require('../../../assets/amazon.jpg')} 
             style={styles.storeIcon} 
             resizeMode="contain" 
           />

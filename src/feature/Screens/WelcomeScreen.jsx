@@ -7,7 +7,7 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 
-const SplashScreen = ({ navigation }) => {
+const WelcomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Welcome Text */}
@@ -26,7 +26,7 @@ const SplashScreen = ({ navigation }) => {
 
       <Button
         mode="outlined"
-        onPress={() => navigation.navigate('Guest')}
+        onPress={() => navigation.navigate('Home')}
         style={styles.guestButton}
         labelStyle={styles.guestButtonText}
       >
@@ -71,4 +71,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SplashScreen;
+export default WelcomeScreen;
