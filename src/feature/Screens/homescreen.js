@@ -1,3 +1,5 @@
+
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -35,14 +37,14 @@ const deals = [
     originalPrice: '$220',
     discountedPrice: '$150',
     discount: '32% off!',
-    image: require('../assets/amazon.jpg'), // Using existing image paths
+    image: require('../../../assets/amazon.jpg'), // Using existing image paths
     store: 'Amazon',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '2', icon: require('../assets/ebay.jpg') },
-      { id: '3', icon: require('../assets/shopify.jpg') },
-      { id: '4', icon: require('../assets/alibaba.jpg') },
-      { id: '5', icon: require('../assets/amazon.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '2', icon: require('../../../assets/ebay.jpg') },
+      { id: '3', icon: require('../../../assets/shopify.jpg') },
+      { id: '4', icon: require('../../../assets/alibaba.jpg') },
+      { id: '5', icon: require('../../../assets/amazon.jpg') },
     ],
     category: 'Best vacuum cleaner'
   },
@@ -53,11 +55,11 @@ const deals = [
     originalPrice: '$175',
     discountedPrice: '$150',
     discount: '14% off!',
-    image: require('../assets/ebay.jpg'),
+    image: require('../../../assets/ebay.jpg'),
     store: 'Amazon',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '2', icon: require('../assets/ebay.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '2', icon: require('../../../assets/ebay.jpg') },
     ],
     category: 'Best electric knife sharpener'
   },
@@ -68,12 +70,12 @@ const deals = [
     originalPrice: '$199',
     discountedPrice: '$129',
     discount: '35% off!',
-    image: require('../assets/shopify.jpg'),
+    image: require('../../../assets/shopify.jpg'),
     store: 'Shopify',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '2', icon: require('../assets/ebay.jpg') },
-      { id: '3', icon: require('../assets/shopify.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '2', icon: require('../../../assets/ebay.jpg') },
+      { id: '3', icon: require('../../../assets/shopify.jpg') },
     ],
     category: 'Best wireless earbuds'
   },
@@ -84,11 +86,11 @@ const deals = [
     originalPrice: '$120',
     discountedPrice: '$79',
     discount: '25% off!',
-    image: require('../assets/alibaba.jpg'),
+    image: require('../../../assets/alibaba.jpg'),
     store: 'Alibaba',
     recommendations: [
-      { id: '1', icon: require('../assets/amazon.jpg') },
-      { id: '4', icon: require('../assets/alibaba.jpg') },
+      { id: '1', icon: require('../../../assets/amazon.jpg') },
+      { id: '4', icon: require('../../../assets/alibaba.jpg') },
     ],
     category: 'Best security cameras'
   }
@@ -187,7 +189,7 @@ const DealCard = ({ item }) => (
       <View style={styles.priceRow}>
         <View style={styles.storeContainer}>
           <Image 
-            source={require('../assets/amazon.jpg')} 
+            source={require('../../../assets/amazon.jpg')} 
             style={styles.storeIcon} 
             resizeMode="contain" 
           />
@@ -208,11 +210,13 @@ const DealCard = ({ item }) => (
   </Card>
 );
 
-const HomeScreen = ({ userEmail }) => {
+const HomeScreen = ({ navigation, onProfilePress, onSearch }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
+  const [searchText, setSearchText] = useState('');
   
-  // Get first letter of email for avatar
+  // Get user email and first letter for avatar
+  const userEmail = 'horacenjorge@gmail.com';
   const avatarLetter = userEmail ? userEmail.charAt(0).toLowerCase() : 'h';
   
   // Calculate header animations
@@ -233,11 +237,21 @@ const HomeScreen = ({ userEmail }) => {
     stickyHeaderPosition.current = event.nativeEvent.layout.y - 60; // Adjust based on header height
   };
 
+  // Handle search submission
+  const handleSearchSubmit = () => {
+    if (onSearch && searchText.trim()) {
+      onSearch(searchText.trim());
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Avatar at top right */}
       <View style={styles.avatarTopContainer}>
-        <TouchableOpacity style={styles.avatarContainer}>
+        <TouchableOpacity 
+          style={styles.avatarContainer}
+          onPress={onProfilePress} // Use the passed onProfilePress function
+        >
           <Text style={styles.avatarText}>{avatarLetter}</Text>
         </TouchableOpacity>
       </View>
@@ -271,8 +285,13 @@ const HomeScreen = ({ userEmail }) => {
               style={styles.stickySearchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
+              value={searchText}
+              onChangeText={setSearchText}
+              onSubmitEditing={handleSearchSubmit}
             />
-            <Icon name="search" type="feather" size={20} color="#888" />
+            <TouchableOpacity onPress={handleSearchSubmit}>
+              <Icon name="search" type="feather" size={20} color="#888" />
+            </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
@@ -291,6 +310,9 @@ const HomeScreen = ({ userEmail }) => {
               style={styles.searchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
+              value={searchText}
+              onChangeText={setSearchText}
+              onSubmitEditing={handleSearchSubmit}
             />
           </View>
           
@@ -304,6 +326,22 @@ const HomeScreen = ({ userEmail }) => {
               <CategoryPill key={category.id} category={category} />
             ))}
           </ScrollView>
+          
+          {/* Test Search Button (you can remove this later) */}
+          <TouchableOpacity 
+            style={{
+              backgroundColor: '#333',
+              padding: 10,
+              borderRadius: 25,
+              margin: 10,
+              alignItems: 'center',
+            }}
+            onPress={() => onSearch && onSearch('test search')}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>
+              Test Search Results
+            </Text>
+          </TouchableOpacity>
         </View>
         
         {/* Share feature card */}
