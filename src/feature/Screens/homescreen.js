@@ -218,10 +218,13 @@ const HomeScreen = ({ navigation, onProfilePress, onSearch , route }) => {
   const [searchText, setSearchText] = useState('');
   
 // Get user email from route params or use default
-const userEmail = route.params?.userEmail || 'horacenjorge@gmail.com';
+//const userEmail = route.params?.userEmail || 'horacenjorge@gmail.com';
 
 // Get first letter of email for avatar
-const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
+//const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
+
+const userEmail = 'horacenjorge@gmail.com';
+  const avatarLetter = userEmail ? userEmail.charAt(0).toLowerCase() : 'h';
   
   // Calculate header animations
   const headerOpacity = scrollY.interpolate({
