@@ -1,7 +1,7 @@
 /**
  * LoginScreen component allows users to sign in or create an account.
  * It provides input fields for email and password, a sign-in button,
- * and options to continue with Google, Apple, or Facebook.
+ * and options to continue with Google, Apple
  */
 
 import React, { useState } from 'react';

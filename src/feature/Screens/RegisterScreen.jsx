@@ -27,7 +27,7 @@ const RegisterScreen = () => {
   const [secureTextEntry, setSecureTextEntry] = useState(true);
   const [secureConfirmTextEntry, setSecureConfirmTextEntry] = useState(true);
 
-  // Email validation
+  // Email validatio
   const validateEmail = (text) => {
     setEmail(text);
     

@@ -3,9 +3,17 @@ import { View, StyleSheet, Animated } from 'react-native';
 import { Text, Button } from 'react-native-paper';
 import { useFonts } from 'expo-font';
 
+/**
+ * WelcomeScreen component displays a welcome message and navigation buttons.
+ * 
+ * @param {object} props - The component props.
+ * @param {object} props.navigation - The navigation object used to navigate between screens.
+ */
 const WelcomeScreen = ({ navigation }) => {
+  // Reference to the animated value for fade-in effect
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
+  // useEffect hook to start the fade-in animation when the component mounts
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -14,22 +22,26 @@ const WelcomeScreen = ({ navigation }) => {
     }).start();
   }, []);
 
+  // Load custom fonts
   const [fontsLoaded] = useFonts({
     Boldonose: require('../../../assets/fonts/Boldonse-Regular.ttf'),
     RobotoBold: require('../../../assets/fonts/Roboto_Condensed-Bold.ttf'),
   });
 
+  // If fonts are not loaded, return null to prevent rendering
   if (!fontsLoaded) {
     return null;
   }
 
   return (
     <View style={styles.container}>
+      {/* Animated view for the welcome message */}
       <Animated.View style={{ opacity: fadeAnim }}>
         <Text style={[styles.title, { fontFamily: 'Boldonose' }]}>Welcome to</Text>
         <Text style={[styles.brand, { fontFamily: 'RobotoBold' }]}>ShopCrawl</Text>
       </Animated.View>
 
+      {/* Animated view for the navigation buttons */}
       <Animated.View style={[styles.buttonContainer, { opacity: fadeAnim }]}>  
         <Button
           mode="contained"
@@ -53,6 +65,7 @@ const WelcomeScreen = ({ navigation }) => {
   );
 };
 
+// Styles for the WelcomeScreen component
 const styles = StyleSheet.create({
   container: {
     flex: 1,

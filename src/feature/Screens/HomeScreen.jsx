@@ -14,7 +14,7 @@ import {
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
 
-// Get screen dimensions for responsive sizing
+// Get screen dimensions for responsive sizin
 const { width } = Dimensions.get('window');
 const productCardWidth = width * 0.7;
 

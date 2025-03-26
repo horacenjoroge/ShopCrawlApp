@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native';
 import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
-import HomeScreen from './src/feature/Screens/HomeScreen'; // Add import for HomeScreen
+import HomeScreen from './src/feature/Screens/HomeScreen'; // Add import for HomeScree
 import LoginScreen from './src/feature/Screens/LoginScreen';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
 import SearchScreen from './src/feature/Screens/SearchScreen';
