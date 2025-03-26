@@ -1,25 +1,17 @@
 /**
- * LoginScreen component allows users to sign in or create an account.
- * It provides input fields for email and password, a sign-in button,
+ * RegisterScreen component allows users to create a new account.
+ * It provides input fields for email, password, confirm password,
  * and options to continue with Google, Apple, or Facebook.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { TextInput, Divider, Button } from 'react-native-paper';
 import { Icon } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
 
-const LoginScreen = () => {
+const RegisterScreen = () => {
   const navigation = useNavigation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSignIn = () => {
-    // Here you would typically validate credentials
-    // For now, we'll just navigate to the Main screen
-    navigation.navigate('Main');
-  };
 
   return (
     <View style={styles.container}>
@@ -32,14 +24,12 @@ const LoginScreen = () => {
       </TouchableOpacity>
 
       <Text style={styles.title}>ShopCrawl</Text>
-      <Text style={styles.subtitle}>Sign in or create an account</Text>
+      <Text style={styles.subtitle}>Create an account</Text>
 
       <TextInput
         label="Email address"
         mode="outlined"
         style={styles.input}
-        value={email}
-        onChangeText={setEmail}
       />
 
       <TextInput
@@ -47,23 +37,22 @@ const LoginScreen = () => {
         mode="outlined"
         secureTextEntry
         style={styles.input}
-        value={password}
-        onChangeText={setPassword}
       />
 
-      <Button 
-        mode="contained" 
-        buttonColor="black" 
-        style={styles.signInButton}
-        onPress={handleSignIn}
-      >
-        Sign In
+      <TextInput
+        label="Confirm Password"
+        mode="outlined"
+        secureTextEntry
+        style={styles.input}
+      />
+
+      <Button mode="contained" buttonColor="black" style={styles.signInButton}>
+        Register
       </Button>
 
-      {/* Register Button */}
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.registerText}>
-          Don't have an account? <Text style={{ fontWeight: 'bold' }}>Register</Text>
+          Already have an account? <Text style={{ fontWeight: 'bold' }}>Sign In</Text>
         </Text>
       </TouchableOpacity>
 
@@ -71,15 +60,15 @@ const LoginScreen = () => {
       <Text style={styles.orContinueText}>Or continue with</Text>
 
       <View style={styles.iconContainer}>
-        <TouchableOpacity style={styles.iconButton} onPress={handleSignIn}>
+        <TouchableOpacity style={styles.iconButton}>
           <Icon name="google" type="font-awesome" size={28} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconButton} onPress={handleSignIn}>
+        <TouchableOpacity style={styles.iconButton}>
           <Icon name="apple" type="font-awesome" size={28} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconButton} onPress={handleSignIn}>
+        <TouchableOpacity style={styles.iconButton}>
           <Icon name="facebook" type="font-awesome" size={28} />
         </TouchableOpacity>
       </View>
@@ -143,4 +132,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default RegisterScreen;

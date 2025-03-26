@@ -210,14 +210,18 @@ const DealCard = ({ item }) => (
   </Card>
 );
 
-const HomeScreen = ({ navigation, onProfilePress, onSearch }) => {
+
+const HomeScreen = ({ navigation, onProfilePress, onSearch , route }) => {
+
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
   const [searchText, setSearchText] = useState('');
   
-  // Get user email and first letter for avatar
-  const userEmail = 'horacenjorge@gmail.com';
-  const avatarLetter = userEmail ? userEmail.charAt(0).toLowerCase() : 'h';
+// Get user email from route params or use default
+const userEmail = route.params?.userEmail || 'horacenjorge@gmail.com';
+
+// Get first letter of email for avatar
+const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
   
   // Calculate header animations
   const headerOpacity = scrollY.interpolate({
@@ -234,7 +238,7 @@ const HomeScreen = ({ navigation, onProfilePress, onSearch }) => {
 
   // Save the position of the "Today's Deals" section for sticky header
   const onTodaysDealsLayout = (event) => {
-    stickyHeaderPosition.current = event.nativeEvent.layout.y - 60; // Adjust based on header height
+    stickyHeaderPosition.current = event.nativeEvent.layout.y - 60;
   };
 
   // Handle search submission
@@ -250,7 +254,9 @@ const HomeScreen = ({ navigation, onProfilePress, onSearch }) => {
       <View style={styles.avatarTopContainer}>
         <TouchableOpacity 
           style={styles.avatarContainer}
+
           onPress={onProfilePress} // Use the passed onProfilePress function
+
         >
           <Text style={styles.avatarText}>{avatarLetter}</Text>
         </TouchableOpacity>
@@ -300,7 +306,7 @@ const HomeScreen = ({ navigation, onProfilePress, onSearch }) => {
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
-        scrollEventThrottle={16} // Important for smooth animations
+        scrollEventThrottle={16}
       >
         {/* Search section with pink background */}
         <View style={styles.searchSection}>
@@ -347,7 +353,7 @@ const HomeScreen = ({ navigation, onProfilePress, onSearch }) => {
         {/* Share feature card */}
         <ShareFeature />
         
-        {/* Today's Deals section - This section stays fixed in place and doesn't scroll up */}
+        {/* Today's Deals section */}
         <View style={styles.headerContainer} onLayout={onTodaysDealsLayout}>
           <Text style={styles.headerText}>Today's Deals on Vetted Picks</Text>
         </View>
@@ -366,7 +372,9 @@ const HomeScreen = ({ navigation, onProfilePress, onSearch }) => {
           ))}
         </ScrollView>
         
+
         {/* No extra space needed here since Tab Navigator will add its own spacing */}
+
       </Animated.ScrollView>
     </View>
   );
@@ -685,7 +693,9 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 16,
     fontWeight: '500',
+
   }
+
 });
 
 export default HomeScreen;

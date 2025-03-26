@@ -1,37 +1,54 @@
-/**
- * SplashScreen component serves as the welcome screen for the ShopCrawl app.
- * It provides options for users to register/login or continue as a guest.
- */
-
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 import { Text, Button } from 'react-native-paper';
+import { useFonts } from 'expo-font';
 
-const SplashScreen = ({ navigation }) => {
+const WelcomeScreen = ({ navigation }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const [fontsLoaded] = useFonts({
+    Boldonose: require('../../../assets/fonts/Boldonse-Regular.ttf'),
+    RobotoBold: require('../../../assets/fonts/Roboto_Condensed-Bold.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
-      {/* Welcome Text */}
-      <Text variant="displayMedium" style={styles.title}>Welcome to</Text>
-      <Text variant="displayMedium" style={styles.brand}>ShopCrawl</Text>
+      <Animated.View style={{ opacity: fadeAnim }}>
+        <Text style={[styles.title, { fontFamily: 'Boldonose' }]}>Welcome to</Text>
+        <Text style={[styles.brand, { fontFamily: 'RobotoBold' }]}>ShopCrawl</Text>
+      </Animated.View>
 
-      {/* Buttons */}
-      <Button
-        mode="contained"
-        onPress={() => navigation.navigate('Login')}
-        style={styles.loginButton}
-        labelStyle={styles.buttonText}
-      >
-        Register / Login
-      </Button>
+      <Animated.View style={[styles.buttonContainer, { opacity: fadeAnim }]}>  
+        <Button
+          mode="contained"
+          onPress={() => navigation.navigate('Login')}
+          style={styles.loginButton}
+          labelStyle={styles.buttonText}
+        >
+          Register / Login
+        </Button>
 
-      <Button
-        mode="outlined"
-        onPress={() => navigation.navigate('Guest')}
-        style={styles.guestButton}
-        labelStyle={styles.guestButtonText}
-      >
-        Continue as Guest
-      </Button>
+        <Button
+          mode="outlined"
+          onPress={() => navigation.navigate('Home')}
+          style={styles.guestButton}
+          labelStyle={styles.guestButtonText}
+        >
+          Continue as Guest
+        </Button>
+      </Animated.View>
     </View>
   );
 };
@@ -44,31 +61,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 28,
-    marginBottom: 0,
+    fontSize: 26,
+    marginBottom: 5,
+    color: 'black',
   },
   brand: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: 'bold',
+    color: 'black',
     marginBottom: 40,
+  },
+  buttonContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
   loginButton: {
     width: 250,
     marginBottom: 20,
     backgroundColor: 'black',
-    borderRadius: 5,
+    borderRadius: 10,
+    elevation: 4,
   },
   buttonText: {
     color: 'white',
+    fontSize: 16,
   },
   guestButton: {
     width: 250,
     borderColor: 'black',
-    borderRadius: 5,
+    borderRadius: 10,
+    elevation: 2,
   },
   guestButtonText: {
     color: 'black',
+    fontSize: 16,
   },
 });
 
-export default SplashScreen;
+export default WelcomeScreen;
