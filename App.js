@@ -6,6 +6,7 @@ import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
 import HomeScreen from './src/feature/Screens/HomeScreen'; // Add import for HomeScreen
 import LoginScreen from './src/feature/Screens/LoginScreen';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
+import SearchScreen from './src/feature/Screens/SearchScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,7 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </SafeAreaView>
     </NavigationContainer>

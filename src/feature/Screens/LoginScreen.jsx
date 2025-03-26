@@ -4,14 +4,98 @@
  * and options to continue with Google, Apple, or Facebook.
  */
 
-import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { TextInput, Divider, Button } from 'react-native-paper';
+import React, { useState } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { TextInput, Divider, Button, HelperText } from 'react-native-paper';
 import { Icon } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { authService } from '../../services/api';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
+  
+  // State variables
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [secureTextEntry, setSecureTextEntry] = useState(true);
+
+  // Email validation
+  const validateEmail = (text) => {
+    setEmail(text);
+    
+    if (!text) {
+      setEmailError('Email is required');
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(text)) {
+      setEmailError('Please enter a valid email address');
+      return false;
+    }
+    
+    setEmailError('');
+    return true;
+  };
+
+  // Password validation
+  const validatePassword = (text) => {
+    setPassword(text);
+    
+    if (!text) {
+      setPasswordError('Password is required');
+      return false;
+    }
+    
+    if (text.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return false;
+    }
+    
+    setPasswordError('');
+    return true;
+  };
+
+  // Toggle password visibility
+  const toggleSecureEntry = () => {
+    setSecureTextEntry(!secureTextEntry);
+  };
+
+  // Handle sign in
+  const handleSignIn = async () => {
+    // Validate inputs before submission
+    const isEmailValid = validateEmail(email);
+    const isPasswordValid = validatePassword(password);
+    
+    if (!isEmailValid || !isPasswordValid) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Call login API
+      const userData = await authService.login(email, password);
+      
+      // Store user data in AsyncStorage
+      await AsyncStorage.setItem('userToken', userData.token);
+      await AsyncStorage.setItem('userId', userData.userId);
+      await AsyncStorage.setItem('userEmail', userData.email);
+      
+      // Navigate to main app
+      navigation.navigate('Home', { userEmail: userData.email });
+    } catch (err) {
+      setError(err.message || 'Failed to sign in');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -26,22 +110,55 @@ const LoginScreen = () => {
       <Text style={styles.title}>ShopCrawl</Text>
       <Text style={styles.subtitle}>Sign in or create an account</Text>
 
+      {/* Email Input */}
       <TextInput
         label="Email address"
         mode="outlined"
         style={styles.input}
+        value={email}
+        onChangeText={validateEmail}
+        error={!!emailError}
+        keyboardType="email-address"
+        autoCapitalize="none"
       />
+      {emailError ? <HelperText type="error">{emailError}</HelperText> : null}
 
+      {/* Password Input */}
       <TextInput
         label="Password"
         mode="outlined"
-        secureTextEntry
+        secureTextEntry={secureTextEntry}
         style={styles.input}
+        value={password}
+        onChangeText={validatePassword}
+        error={!!passwordError}
+        right={
+          <TextInput.Icon 
+            icon={secureTextEntry ? "eye" : "eye-off"} 
+            onPress={toggleSecureEntry} 
+          />
+        }
       />
+      {passwordError ? <HelperText type="error">{passwordError}</HelperText> : null}
 
-      <Button mode="contained" buttonColor="black" style={styles.signInButton}>
-        Sign In
+      {/* General Error Message */}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      {/* Sign In Button */}
+      <Button 
+        mode="contained" 
+        buttonColor="black" 
+        style={styles.signInButton}
+        onPress={handleSignIn}
+        disabled={loading}
+      >
+        {loading ? <ActivityIndicator color="white" size="small" /> : "Sign In"}
       </Button>
+
+      {/* Forgot Password */}
+      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+        <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+      </TouchableOpacity>
 
       {/* Register Button */}
       <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -94,12 +211,23 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   input: {
-    marginBottom: 20,
+    marginBottom: 5,
   },
   signInButton: {
     paddingVertical: 5,
     marginTop: 10,
     marginBottom: 20,
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  forgotPasswordText: {
+    textAlign: 'center',
+    color: 'black',
+    marginBottom: 15,
+    textDecorationLine: 'underline',
   },
   registerText: {
     textAlign: 'center',
