@@ -13,9 +13,10 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // Import your screens
-import SplashScreen from './src/feature/Screens/WelcomeScreen';
+import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
 import LoginScreen from './src/feature/Screens/LoginScreen';
 import HomeScreen from './src/feature/Screens/homescreen';
+import RegisterScreen from './src/feature/Screens/RegisterScreen';
 
 // Import new components/screens
 import SearchResultScreen from './src/feature/Screens/SearchResultScreen';
@@ -198,10 +199,11 @@ export default function App() {
   return (
     <NavigationContainer>
       <SafeAreaView style={{ flex: 1 }}>
-        <Stack.Navigator initialRouteName="Splash">
-          <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
+        <Stack.Navigator initialRouteName="Welcome">
+          <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="SearchResults" 
             component={SearchResultsWithLoading} 
