@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -16,7 +14,7 @@ import {
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
 
-// Get screen dimensions for responsive sizing
+// Get screen dimensions for responsive sizin
 const { width } = Dimensions.get('window');
 const productCardWidth = width * 0.7;
 
@@ -210,18 +208,15 @@ const DealCard = ({ item }) => (
   </Card>
 );
 
-
-const HomeScreen = ({ navigation, onProfilePress, onSearch , route }) => {
-
+const HomeScreen = ({ navigation, route }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
-  const [searchText, setSearchText] = useState('');
   
-// Get user email from route params or use default
-const userEmail = route.params?.userEmail || 'horacenjorge@gmail.com';
-
-// Get first letter of email for avatar
-const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
+  // Get user email from route params or use default
+  const userEmail = route.params?.userEmail || '';
+  
+  // Get first letter of email for avatar
+  const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'S';
   
   // Calculate header animations
   const headerOpacity = scrollY.interpolate({
@@ -241,22 +236,13 @@ const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
     stickyHeaderPosition.current = event.nativeEvent.layout.y - 60;
   };
 
-  // Handle search submission
-  const handleSearchSubmit = () => {
-    if (onSearch && searchText.trim()) {
-      onSearch(searchText.trim());
-    }
-  };
-
   return (
     <View style={styles.container}>
       {/* Avatar at top right */}
       <View style={styles.avatarTopContainer}>
         <TouchableOpacity 
           style={styles.avatarContainer}
-
-          onPress={onProfilePress} // Use the passed onProfilePress function
-
+          onPress={() => navigation.navigate('Profile')}
         >
           <Text style={styles.avatarText}>{avatarLetter}</Text>
         </TouchableOpacity>
@@ -291,13 +277,8 @@ const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
               style={styles.stickySearchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
-              value={searchText}
-              onChangeText={setSearchText}
-              onSubmitEditing={handleSearchSubmit}
             />
-            <TouchableOpacity onPress={handleSearchSubmit}>
-              <Icon name="search" type="feather" size={20} color="#888" />
-            </TouchableOpacity>
+            <Icon name="search" type="feather" size={20} color="#888" />
           </View>
         </View>
       </Animated.View>
@@ -316,9 +297,6 @@ const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
               style={styles.searchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
-              value={searchText}
-              onChangeText={setSearchText}
-              onSubmitEditing={handleSearchSubmit}
             />
           </View>
           
@@ -332,22 +310,6 @@ const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
               <CategoryPill key={category.id} category={category} />
             ))}
           </ScrollView>
-          
-          {/* Test Search Button (you can remove this later) */}
-          <TouchableOpacity 
-            style={{
-              backgroundColor: '#333',
-              padding: 10,
-              borderRadius: 25,
-              margin: 10,
-              alignItems: 'center',
-            }}
-            onPress={() => onSearch && onSearch('test search')}
-          >
-            <Text style={{ color: 'white', fontWeight: 'bold' }}>
-              Test Search Results
-            </Text>
-          </TouchableOpacity>
         </View>
         
         {/* Share feature card */}
@@ -372,9 +334,8 @@ const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'H';
           ))}
         </ScrollView>
         
-
-        {/* No extra space needed here since Tab Navigator will add its own spacing */}
-
+        {/* Additional space at bottom for tab navigation */}
+        <View style={{ height: 20 }} />
       </Animated.ScrollView>
     </View>
   );
@@ -553,7 +514,6 @@ const styles = StyleSheet.create({
   dealsScrollContainer: {
     paddingLeft: 15,
     paddingRight: 15,
-    paddingBottom: 20, // Reduced padding at bottom
   },
   discountBadge: {
     position: 'absolute',
@@ -693,9 +653,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 16,
     fontWeight: '500',
-
-  }
-
+  },
 });
 
 export default HomeScreen;
