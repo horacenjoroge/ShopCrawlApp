@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
   ScrollView, 
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
@@ -166,44 +166,59 @@ const HomeScreen = ({ navigation, route = {} }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [userEmail, setUserEmail] = useState('');
+  const [avatarLetter, setAvatarLetter] = useState('S');
+  const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
   const handleSearchSubmit = () => {
     if (searchQuery.trim() !== "") {
       navigation.navigate("Search", { query: searchQuery });
       setSearchQuery(""); // Clear input after search
     }
   };
-  const [userEmail, setUserEmail] = useState('');
-  const [avatarLetter, setAvatarLetter] = useState('S');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [deals, setDeals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   
   // Get user data from AsyncStorage on component mount
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // First try to get from route params if available
-        let email = route.params?.userEmail;
-        
-        // If not in route params, try AsyncStorage
-        if (!email) {
-          email = await AsyncStorage.getItem('userEmail');
-        }
-        
-        if (email) {
-          setUserEmail(email);
-          setAvatarLetter(email.charAt(0).toUpperCase());
-        }
-      } catch (error) {
-        console.error('Error getting user email:', error);
+  const fetchUserData = async () => {
+    try {
+      // First try to get from route params if available
+      let email = route.params?.userEmail;
+      console.log('Email from route params:', email);
+      
+      // If not in route params, try AsyncStorage
+      if (!email) {
+        email = await AsyncStorage.getItem('userEmail');
+        console.log('Email from AsyncStorage:', email);
       }
-    };
-    
+      
+      if (email) {
+        console.log('Setting user email to:', email);
+        setUserEmail(email);
+        const firstLetter = email.charAt(0).toUpperCase();
+        console.log('Setting avatar letter to:', firstLetter);
+        setAvatarLetter(firstLetter);
+      } else {
+        console.log('No email found');
+      }
+    } catch (error) {
+      console.error('Error getting user email:', error);
+    }
+  };
+  
+  useEffect(() => {
     fetchUserData();
     fetchDeals();
   }, [route.params]);
+  
+  // Refresh user data when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('Screen focused, refreshing user data');
+      fetchUserData();
+      return () => {};
+    }, [])
+  );
   
   // Fetch deals from API
   const fetchDeals = async () => {
@@ -340,26 +355,26 @@ const HomeScreen = ({ navigation, route = {} }) => {
   };
   
   // Save search query to history
-const saveSearchToHistory = async (query) => {
-  try {
-    const token = await AsyncStorage.getItem('userToken');
-    
-    if (!token) {
-      console.log('No auth token found, skipping history save');
-      return;
+  const saveSearchToHistory = async (query) => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      
+      if (!token) {
+        console.log('No auth token found, skipping history save');
+        return;
+      }
+      
+      // Make API call to save the search query
+      await axios.post('http://192.168.100.54:3000/api/history', 
+        { query },
+        { headers: { 'x-auth-token': token } }
+      );
+      
+      console.log('Search saved to history:', query);
+    } catch (err) {
+      console.error('Error saving search to history:', err);
     }
-    
-    // Make API call to save the search query
-    await axios.post('http://192.168.100.54:3000/api/history', 
-      { query },
-      { headers: { 'x-auth-token': token } }
-    );
-    
-    console.log('Search saved to history:', query);
-  } catch (err) {
-    console.error('Error saving search to history:', err);
-  }
-};
+  };
   
   // Handle category selection
   const handleCategorySelect = (categoryName) => {
