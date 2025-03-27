@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,6 +11,7 @@ import {
   StyleSheet 
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Import your screens
 import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
@@ -62,14 +63,35 @@ const SearchResultsWithLoading = ({ route }) => {
   );
 };
 
-// Home Screen with Profile Menu Overlay
+// Home Screen with Profile Menu Overlay - Updated to use AsyncStorage
 const HomeWithProfile = ({ navigation }) => {
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [userData, setUserData] = useState({
+    name: '',
+    email: ''
+  });
   
-  const userData = {
-    name: 'horace njoroge',
-    email: 'horacenjorge@gmail.com'
-  };
+  // Fetch user data from AsyncStorage
+  useEffect(() => {
+    const getUserData = async () => {
+      try {
+        const email = await AsyncStorage.getItem('userEmail');
+        const userId = await AsyncStorage.getItem('userId');
+        
+        if (email) {
+          const username = email.split('@')[0]; // Simple username from email
+          setUserData({
+            name: username,
+            email: email
+          });
+        }
+      } catch (error) {
+        console.error('Error retrieving user data from AsyncStorage:', error);
+      }
+    };
+    
+    getUserData();
+  }, []);
   
   const handleSearch = (query) => {
     navigation.navigate('SearchResults', { query });
@@ -81,6 +103,7 @@ const HomeWithProfile = ({ navigation }) => {
         navigation={navigation} 
         onProfilePress={() => setProfileMenuVisible(true)}
         onSearch={handleSearch}
+        userData={userData}
       />
       <ProfileMenuOverlay 
         visible={profileMenuVisible} 
@@ -109,14 +132,35 @@ const SavedScreen = () => {
   );
 };
 
-// Profile Screen
+// Profile Screen - Updated to use AsyncStorage
 const ProfileScreen = () => {
   const [profileMenuVisible, setProfileMenuVisible] = useState(true);
+  const [userData, setUserData] = useState({
+    name: '',
+    email: ''
+  });
   
-  const userData = {
-    name: 'horace njoroge',
-    email: 'horacenjorge@gmail.com'
-  };
+  // Fetch user data from AsyncStorage
+  useEffect(() => {
+    const getUserData = async () => {
+      try {
+        const email = await AsyncStorage.getItem('userEmail');
+        const userId = await AsyncStorage.getItem('userId');
+        
+        if (email) {
+          const username = email.split('@')[0]; // Simple username from email
+          setUserData({
+            name: username,
+            email: email
+          });
+        }
+      } catch (error) {
+        console.error('Error retrieving user data from AsyncStorage:', error);
+      }
+    };
+    
+    getUserData();
+  }, []);
   
   return (
     <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
@@ -195,6 +239,43 @@ function MainTabs() {
   );
 }
 
+// Simple wrapper for standalone HomeScreen that loads user data from AsyncStorage
+const HomeScreenWrapper = ({ navigation, route }) => {
+  const [userData, setUserData] = useState({
+    name: '',
+    email: route.params?.userEmail || ''
+  });
+  
+  useEffect(() => {
+    if (!userData.email) {
+      const getUserData = async () => {
+        try {
+          const email = await AsyncStorage.getItem('userEmail');
+          if (email) {
+            const username = email.split('@')[0];
+            setUserData({
+              name: username,
+              email: email
+            });
+          }
+        } catch (error) {
+          console.error('Error retrieving user data:', error);
+        }
+      };
+      
+      getUserData();
+    }
+  }, [userData.email]);
+  
+  return (
+    <HomeScreen 
+      navigation={navigation}
+      userData={userData}
+      onProfilePress={() => navigation.navigate('Main')}
+    />
+  );
+};
+
 // Main app component with navigation setup
 export default function App() {
   return (
@@ -204,7 +285,7 @@ export default function App() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Home" component={HomeScreenWrapper} options={{ headerShown: false }} />
           <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
           <Stack.Screen 

@@ -80,17 +80,33 @@ const LoginScreen = () => {
       setLoading(true);
       setError('');
       
+      console.log('Attempting login with:', { email, password: '***' });
+      
       // Call login API
       const userData = await authService.login(email, password);
+      console.log('Login response:', userData);
       
-      // Store user data in AsyncStorage
+      if (!userData) {
+        throw new Error('Invalid response from server');
+      }
+      
+      // Store user data in AsyncStorage - updated to handle new response format
       await AsyncStorage.setItem('userToken', userData.token);
-      await AsyncStorage.setItem('userId', userData.userId);
-      await AsyncStorage.setItem('userEmail', userData.email);
+      
+      // Handle both old and new response formats
+      if (userData.user && userData.user._id) {
+        await AsyncStorage.setItem('userId', userData.user._id);
+        await AsyncStorage.setItem('userEmail', userData.user.email);
+      } else if (userData.userId) {
+        await AsyncStorage.setItem('userId', userData.userId);
+        // Even if backend didn't send email, we know it from the form
+        await AsyncStorage.setItem('userEmail', email);
+      }
       
       // Navigate to main app
-      navigation.navigate('Home', { userEmail: userData.email });
+      navigation.navigate('Main');
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
