@@ -5,6 +5,12 @@
     "version": "1.0.0",
     "assetBundlePatterns": [
       "**/*"
-    ]
+    ],
+    "android": {
+      "package": "com.finch2000.ShopCrawlApp"
+    },
+    "ios": {
+      "bundleIdentifier": "com.finch2000.ShopCrawlApp"
+    }
   }
 }
