@@ -3,7 +3,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base API URL - change this to your actual API URL in production
-const API_URL = 'https://192.168.100.54:3000/api';
+const API_URL = 'http://192.168.100.54:3000/api';
 
 // Create axios instance with base config
 const api = axios.create({
@@ -16,9 +16,9 @@ const api = axios.create({
 // Add request interceptor to add auth token to requests
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const token = await AsyncStorage.getItem('userToken'); // Note: use 'userToken' not 'token'
+   if (token) {
+      config.headers['x-auth-token'] = token; // Use x-auth-token instead of Authorization
     }
     return config;
   },
@@ -39,6 +39,17 @@ export const historyService = {
       throw error;
     }
   },
+
+  // Add to historyService
+addSearchToHistory: async (query) => {
+  try {
+    const response = await api.post('/history', { query });
+    return response.data;
+  } catch (error) {
+    console.error('Error saving search to history:', error);
+    throw error;
+  }
+},
 
   // Delete a history item
   deleteHistoryItem: async (id) => {

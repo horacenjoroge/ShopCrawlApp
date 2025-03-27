@@ -19,6 +19,7 @@ import LoginScreen from './src/feature/Screens/LoginScreen';
 import HomeScreen from './src/feature/Screens/HomeScreen';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
 import SearchScreen from './src/feature/Screens/SearchScreen';
+import HistoryScreen from './src/feature/Screens/HistoryScreen'; // Import your detailed HistoryScreen
 
 // Import other components/screens
 import SearchResultScreen from './src/feature/Screens/SearchResult';
@@ -110,15 +111,6 @@ const HomeWithProfile = ({ navigation }) => {
         onClose={() => setProfileMenuVisible(false)}
         userData={userData}
       />
-    </View>
-  );
-};
-
-// History Screen
-const HistoryScreen = () => {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }}>
-      <Text style={{ color: 'white', fontSize: 18 }}>Search History</Text>
     </View>
   );
 };
@@ -240,7 +232,7 @@ function MainTabs() {
 }
 
 // Simple wrapper for standalone HomeScreen that loads user data from AsyncStorage
-const HomeScreenWrapper = ({ navigation, route }) => {
+const HomeScreenWrapper = ({ navigation, route = {} }) => {
   const [userData, setUserData] = useState({
     name: '',
     email: route.params?.userEmail || ''

@@ -68,50 +68,47 @@ const LoginScreen = () => {
 
   // Handle sign in
   const handleSignIn = async () => {
-    // Validate inputs before submission
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
-    
+  
     if (!isEmailValid || !isPasswordValid) {
       return;
     }
-    
+  
     try {
       setLoading(true);
       setError('');
       
       console.log('Attempting login with:', { email, password: '***' });
-      
+  
       // Call login API
       const userData = await authService.login(email, password);
-      console.log('Login response:', userData);
-      
-      if (!userData) {
-        throw new Error('Invalid response from server');
+  
+      console.log('Login Response:', userData); //  Debug Response
+  
+      if (userData.error) {
+        throw new Error(userData.error);
       }
-      
-      // Store user data in AsyncStorage - updated to handle new response format
+  
+      // Store user data in AsyncStorage
       await AsyncStorage.setItem('userToken', userData.token);
-      
-      // Handle both old and new response formats
-      if (userData.user && userData.user._id) {
-        await AsyncStorage.setItem('userId', userData.user._id);
-        await AsyncStorage.setItem('userEmail', userData.user.email);
-      } else if (userData.userId) {
-        await AsyncStorage.setItem('userId', userData.userId);
-        // Even if backend didn't send email, we know it from the form
-        await AsyncStorage.setItem('userEmail', email);
-      }
-      
-      // Navigate to main app
-      navigation.navigate('Main');
+      await AsyncStorage.setItem('userId', userData.userId);
+      await AsyncStorage.setItem('userEmail', userData.email || ''); // Ensure it's not undefined
+  
+      const storedEmail = await AsyncStorage.getItem('userEmail');
+      console.log('Stored Email:', storedEmail); // Check AsyncStorage
+  
+      // Navigate to home only if AsyncStorage is successful
+      navigation.replace('Home', { userEmail: storedEmail });
     } catch (err) {
-      console.error('Login error:', err);
+      console.log('Login Error:', err.message); // Debug Errors
       setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }
   };
+  
+  
 
   return (
     <View style={styles.container}>

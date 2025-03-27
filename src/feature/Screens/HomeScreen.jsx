@@ -9,11 +9,14 @@ import {
   Dimensions, 
   Share,
   Platform,
-  Animated
+  Animated,
+  ActivityIndicator
 } from 'react-native';
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
+import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 // Get screen dimensions for responsive sizing
 const { width } = Dimensions.get('window');
@@ -27,77 +30,12 @@ const categories = [
   { id: 4, name: 'Women\'s hiking boots', color: '#FFB6B6' },
 ];
 
-// Sample data for deals
-const deals = [
-  {
-    id: 1,
-    name: 'Shark Navigator Lift-Away ADV',
-    description: 'This vacuum delivers excellent all-around performance, especially with embedded debris on carpets, and features a self-cleaning brushroll.',
-    originalPrice: '$220',
-    discountedPrice: '$150',
-    discount: '32% off!',
-    image: require('../../../assets/amazon.jpg'), // Using existing image paths
-    store: 'Amazon',
-    recommendations: [
-      { id: '1', icon: require('../../../assets/amazon.jpg') },
-      { id: '2', icon: require('../../../assets/ebay.jpg') },
-      { id: '3', icon: require('../../../assets/shopify.jpg') },
-      { id: '4', icon: require('../../../assets/alibaba.jpg') },
-      { id: '5', icon: require('../../../assets/amazon.jpg') },
-    ],
-    category: 'Best vacuum cleaner'
-  },
-  {
-    id: 2,
-    name: 'Presto Professional Electric Knife Sharpener',
-    description: 'This adjustable electric sharpener works with all kinds of blades of different materials and features a serrated blade sharpening slot.',
-    originalPrice: '$175',
-    discountedPrice: '$150',
-    discount: '14% off!',
-    image: require('../../../assets/ebay.jpg'),
-    store: 'Amazon',
-    recommendations: [
-      { id: '1', icon: require('../../../assets/amazon.jpg') },
-      { id: '2', icon: require('../../../assets/ebay.jpg') },
-    ],
-    category: 'Best electric knife sharpener'
-  },
-  {
-    id: 3,
-    name: 'Wireless Bluetooth Earbuds',
-    description: 'Premium sound quality with active noise cancellation and 36-hour battery life with charging case.',
-    originalPrice: '$199',
-    discountedPrice: '$129',
-    discount: '35% off!',
-    image: require('../../../assets/shopify.jpg'),
-    store: 'Shopify',
-    recommendations: [
-      { id: '1', icon: require('../../../assets/amazon.jpg') },
-      { id: '2', icon: require('../../../assets/ebay.jpg') },
-      { id: '3', icon: require('../../../assets/shopify.jpg') },
-    ],
-    category: 'Best wireless earbuds'
-  },
-  {
-    id: 4,
-    name: 'Smart Home Security Camera',
-    description: '1080p HD indoor/outdoor camera with night vision, 2-way audio and motion detection alerts.',
-    originalPrice: '$120',
-    discountedPrice: '$79',
-    discount: '25% off!',
-    image: require('../../../assets/alibaba.jpg'),
-    store: 'Alibaba',
-    recommendations: [
-      { id: '1', icon: require('../../../assets/amazon.jpg') },
-      { id: '4', icon: require('../../../assets/alibaba.jpg') },
-    ],
-    category: 'Best security cameras'
-  }
-];
-
 // Search category component
-const CategoryPill = ({ category }) => (
-  <TouchableOpacity style={[styles.categoryPill, { backgroundColor: category.color }]}>
+const CategoryPill = ({ category, onPress }) => (
+  <TouchableOpacity 
+    style={[styles.categoryPill, { backgroundColor: category.color }]}
+    onPress={() => onPress(category.name)}
+  >
     <Text style={styles.categoryPillText}>{category.name}</Text>
   </TouchableOpacity>
 );
@@ -105,7 +43,11 @@ const CategoryPill = ({ category }) => (
 // Recommendation badge component
 const RecommendBadge = ({ icon }) => (
   <View style={styles.recommendBadge}>
-    <Image source={icon} style={styles.recommendIcon} resizeMode="contain" />
+    {typeof icon === 'string' ? (
+      <Image source={{ uri: icon }} style={styles.recommendIcon} resizeMode="contain" />
+    ) : (
+      <Image source={icon} style={styles.recommendIcon} resizeMode="contain" />
+    )}
   </View>
 );
 
@@ -147,19 +89,24 @@ const ShareFeature = () => {
 };
 
 // Product card component
-const DealCard = ({ item }) => (
+const DealCard = ({ item, onSave }) => (
   <Card style={[styles.dealCard, { width: productCardWidth }]}>
     {/* Discount badge */}
-    <View style={styles.discountBadge}>
-      <Text style={styles.discountText}>{item.discount}</Text>
-    </View>
+    {item.discount && (
+      <View style={styles.discountBadge}>
+        <Text style={styles.discountText}>{item.discount}</Text>
+      </View>
+    )}
     
     {/* Bookmark icon */}
-    <TouchableOpacity style={styles.bookmarkButton}>
+    <TouchableOpacity style={styles.bookmarkButton} onPress={() => onSave(item)}>
       <Icon name="bookmark-outline" type="material-community" size={24} color="#888" />
     </TouchableOpacity>
     
-    <Card.Cover source={item.image} style={styles.dealImage} />
+    <Card.Cover 
+      source={typeof item.image === 'string' ? { uri: item.image } : item.image} 
+      style={styles.dealImage} 
+    />
     
     <Card.Content style={styles.dealContent}>
       <Text style={styles.dealName}>{item.name}</Text>
@@ -168,35 +115,41 @@ const DealCard = ({ item }) => (
       </Text>
       
       {/* Recommendations */}
-      <View style={styles.recommendRow}>
-        <Text style={styles.recommendText}>RECOMMENDED BY:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.recommendBadges}>
-            {item.recommendations.map((rec) => (
-              <RecommendBadge key={rec.id} icon={rec.icon} />
-            ))}
-            {item.recommendations.length > 4 && (
-              <View style={styles.moreBadge}>
-                <Text style={styles.moreText}>+9</Text>
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      </View>
+      {item.recommendations && (
+        <View style={styles.recommendRow}>
+          <Text style={styles.recommendText}>RECOMMENDED BY:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.recommendBadges}>
+              {item.recommendations.map((rec) => (
+                <RecommendBadge key={rec.id} icon={rec.icon} />
+              ))}
+              {item.recommendations.length > 4 && (
+                <View style={styles.moreBadge}>
+                  <Text style={styles.moreText}>+{item.recommendations.length - 4}</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      )}
       
       {/* Store and price */}
       <View style={styles.priceRow}>
         <View style={styles.storeContainer}>
           <Image 
-            source={require('../../../assets/amazon.jpg')} 
+            source={typeof item.storeIcon === 'string' 
+              ? { uri: item.storeIcon } 
+              : require('../../../assets/amazon.jpg')} 
             style={styles.storeIcon} 
             resizeMode="contain" 
           />
           <Text style={styles.storeName}>{item.store}</Text>
         </View>
         <View style={styles.priceContainer}>
-          <Text style={styles.originalPrice}>{item.originalPrice}</Text>
-          <Text style={styles.discountedPrice}>{item.discountedPrice}</Text>
+          {item.originalPrice && (
+            <Text style={styles.originalPrice}>{item.originalPrice}</Text>
+          )}
+          <Text style={styles.discountedPrice}>{item.discountedPrice || item.price}</Text>
         </View>
       </View>
     </Card.Content>
@@ -212,8 +165,20 @@ const DealCard = ({ item }) => (
 const HomeScreen = ({ navigation, route = {} }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim() !== "") {
+      navigation.navigate("Search", { query: searchQuery });
+      setSearchQuery(""); // Clear input after search
+    }
+  };
   const [userEmail, setUserEmail] = useState('');
   const [avatarLetter, setAvatarLetter] = useState('S');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   // Get user data from AsyncStorage on component mount
   useEffect(() => {
@@ -237,7 +202,170 @@ const HomeScreen = ({ navigation, route = {} }) => {
     };
     
     fetchUserData();
+    fetchDeals();
   }, [route.params]);
+  
+  // Fetch deals from API
+  const fetchDeals = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // In a real app, this would be an API call to your backend or directly to a product API
+      // Example API call using axios:
+      // const response = await axios.get('https://your-api.com/api/deals');
+      // setDeals(response.data);
+      
+      // For now, we'll use the sample data but structure it for future API integration
+      const sampleDeals = [
+        {
+          id: 1,
+          name: 'Shark Navigator Lift-Away ADV',
+          description: 'This vacuum delivers excellent all-around performance, especially with embedded debris on carpets, and features a self-cleaning brushroll.',
+          originalPrice: '$220',
+          discountedPrice: '$150',
+          discount: '32% off!',
+          image: require('../../../assets/amazon.jpg'), // Using existing image paths
+          store: 'Amazon',
+          storeIcon: require('../../../assets/amazon.jpg'),
+          recommendations: [
+            { id: '1', icon: require('../../../assets/amazon.jpg') },
+            { id: '2', icon: require('../../../assets/ebay.jpg') },
+            { id: '3', icon: require('../../../assets/shopify.jpg') },
+            { id: '4', icon: require('../../../assets/alibaba.jpg') },
+            { id: '5', icon: require('../../../assets/amazon.jpg') },
+          ],
+          category: 'Best vacuum cleaner'
+        },
+        {
+          id: 2,
+          name: 'Presto Professional Electric Knife Sharpener',
+          description: 'This adjustable electric sharpener works with all kinds of blades of different materials and features a serrated blade sharpening slot.',
+          originalPrice: '$175',
+          discountedPrice: '$150',
+          discount: '14% off!',
+          image: require('../../../assets/ebay.jpg'),
+          store: 'Amazon',
+          storeIcon: require('../../../assets/amazon.jpg'),
+          recommendations: [
+            { id: '1', icon: require('../../../assets/amazon.jpg') },
+            { id: '2', icon: require('../../../assets/ebay.jpg') },
+          ],
+          category: 'Best electric knife sharpener'
+        },
+        {
+          id: 3,
+          name: 'Wireless Bluetooth Earbuds',
+          description: 'Premium sound quality with active noise cancellation and 36-hour battery life with charging case.',
+          originalPrice: '$199',
+          discountedPrice: '$129',
+          discount: '35% off!',
+          image: require('../../../assets/shopify.jpg'),
+          store: 'Shopify',
+          storeIcon: require('../../../assets/shopify.jpg'),
+          recommendations: [
+            { id: '1', icon: require('../../../assets/amazon.jpg') },
+            { id: '2', icon: require('../../../assets/ebay.jpg') },
+            { id: '3', icon: require('../../../assets/shopify.jpg') },
+          ],
+          category: 'Best wireless earbuds'
+        },
+        {
+          id: 4,
+          name: 'Smart Home Security Camera',
+          description: '1080p HD indoor/outdoor camera with night vision, 2-way audio and motion detection alerts.',
+          originalPrice: '$120',
+          discountedPrice: '$79',
+          discount: '25% off!',
+          image: require('../../../assets/alibaba.jpg'),
+          store: 'Alibaba',
+          storeIcon: require('../../../assets/alibaba.jpg'),
+          recommendations: [
+            { id: '1', icon: require('../../../assets/amazon.jpg') },
+            { id: '4', icon: require('../../../assets/alibaba.jpg') },
+          ],
+          category: 'Best security cameras'
+        }
+      ];
+      
+      setDeals(sampleDeals);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching deals:', err);
+      setError('Failed to load deals');
+      setLoading(false);
+    }
+  };
+  
+  // Save a product to user's saved items
+  const handleSaveProduct = async (product) => {
+    try {
+      // Get existing saved products from AsyncStorage
+      const savedProductsJson = await AsyncStorage.getItem('savedProducts');
+      let savedProducts = savedProductsJson ? JSON.parse(savedProductsJson) : [];
+      
+      // Check if product is already saved
+      const isAlreadySaved = savedProducts.some(item => item.id === product.id);
+      
+      if (isAlreadySaved) {
+        // Remove from saved products
+        savedProducts = savedProducts.filter(item => item.id !== product.id);
+      } else {
+        // Add to saved products
+        savedProducts.push(product);
+      }
+      
+      // Save back to AsyncStorage
+      await AsyncStorage.setItem('savedProducts', JSON.stringify(savedProducts));
+      
+      // Show feedback to the user (could use a toast or snackbar)
+      console.log(isAlreadySaved ? 'Product removed from saved items' : 'Product saved');
+    } catch (err) {
+      console.error('Error saving product:', err);
+    }
+  };
+  
+  // Handle search submission
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      // Save search query to history via API
+      saveSearchToHistory(searchQuery);
+      
+      // Navigate to search results screen
+      navigation.navigate('SearchResults', { query: searchQuery });
+      
+      // Clear the search input
+      setSearchQuery('');
+    }
+  };
+  
+  // Save search query to history
+const saveSearchToHistory = async (query) => {
+  try {
+    const token = await AsyncStorage.getItem('userToken');
+    
+    if (!token) {
+      console.log('No auth token found, skipping history save');
+      return;
+    }
+    
+    // Make API call to save the search query
+    await axios.post('http://192.168.100.54:3000/api/history', 
+      { query },
+      { headers: { 'x-auth-token': token } }
+    );
+    
+    console.log('Search saved to history:', query);
+  } catch (err) {
+    console.error('Error saving search to history:', err);
+  }
+};
+  
+  // Handle category selection
+  const handleCategorySelect = (categoryName) => {
+    saveSearchToHistory(categoryName);
+    navigation.navigate('SearchResults', { query: categoryName });
+  };
   
   // Calculate header animations
   const headerOpacity = scrollY.interpolate({
@@ -298,8 +426,13 @@ const HomeScreen = ({ navigation, route = {} }) => {
               style={styles.stickySearchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
             />
-            <Icon name="search" type="feather" size={20} color="#888" />
+            <TouchableOpacity onPress={handleSearch}>
+              <Icon name="search" type="feather" size={20} color="#888" />
+            </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
@@ -318,7 +451,13 @@ const HomeScreen = ({ navigation, route = {} }) => {
               style={styles.searchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
             />
+            <TouchableOpacity onPress={handleSearch}>
+              <Icon name="search" type="feather" size={24} color="#888" />
+            </TouchableOpacity>
           </View>
           
           {/* Categories horizontal scroll */}
@@ -328,7 +467,11 @@ const HomeScreen = ({ navigation, route = {} }) => {
             contentContainerStyle={styles.categoriesContainer}
           >
             {categories.map(category => (
-              <CategoryPill key={category.id} category={category} />
+              <CategoryPill 
+                key={category.id} 
+                category={category} 
+                onPress={handleCategorySelect}
+              />
             ))}
           </ScrollView>
         </View>
@@ -342,18 +485,36 @@ const HomeScreen = ({ navigation, route = {} }) => {
         </View>
         
         {/* Deals list - horizontal scrolling */}
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          decelerationRate="fast"
-          snapToInterval={productCardWidth + 30}
-          contentContainerStyle={styles.dealsScrollContainer}
-        >
-          {deals.map(deal => (
-            <DealCard key={deal.id} item={deal} />
-          ))}
-        </ScrollView>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#FFC107" />
+            <Text style={styles.loadingText}>Loading deals...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchDeals}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            decelerationRate="fast"
+            snapToInterval={productCardWidth + 30}
+            contentContainerStyle={styles.dealsScrollContainer}
+          >
+            {deals.map(deal => (
+              <DealCard 
+                key={deal.id} 
+                item={deal} 
+                onSave={handleSaveProduct}
+              />
+            ))}
+          </ScrollView>
+        )}
         
         {/* Additional space at bottom for tab navigation */}
         <View style={{ height: 20 }} />
@@ -449,7 +610,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     paddingHorizontal: 15,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -459,6 +621,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     fontSize: 16,
+    flex: 1,
   },
   categoriesContainer: {
     paddingBottom: 10,
@@ -674,6 +837,36 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  loadingContainer: {
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  errorContainer: {
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: '#ff6b6b',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#FFC107',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
   },
 });
 
