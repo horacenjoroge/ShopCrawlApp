@@ -68,34 +68,45 @@ const LoginScreen = () => {
 
   // Handle sign in
   const handleSignIn = async () => {
-    // Validate inputs before submission
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
-    
+  
     if (!isEmailValid || !isPasswordValid) {
       return;
     }
-    
+  
     try {
       setLoading(true);
       setError('');
-      
+  
       // Call login API
       const userData = await authService.login(email, password);
-      
+  
+      console.log('Login Response:', userData); //  Debug Response
+  
+      if (userData.error) {
+        throw new Error(userData.error);
+      }
+  
       // Store user data in AsyncStorage
       await AsyncStorage.setItem('userToken', userData.token);
       await AsyncStorage.setItem('userId', userData.userId);
-      await AsyncStorage.setItem('userEmail', userData.email);
-      
-      // Navigate to main app
-      navigation.navigate('Home', { userEmail: userData.email });
+      await AsyncStorage.setItem('userEmail', userData.email || ''); // Ensure it's not undefined
+  
+      const storedEmail = await AsyncStorage.getItem('userEmail');
+      console.log('Stored Email:', storedEmail); // Check AsyncStorage
+  
+      // Navigate to home only if AsyncStorage is successful
+      navigation.replace('Home', { userEmail: storedEmail });
     } catch (err) {
+      console.log('Login Error:', err.message); // Debug Errors
       setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }
   };
+  
+  
 
   return (
     <View style={styles.container}>

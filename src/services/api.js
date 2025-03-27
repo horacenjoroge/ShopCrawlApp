@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for your backend API
-const API_BASE_URL = 'http://192.168.0.175:5000/api'; // Update this with your actual backend URL when deploy
+const API_BASE_URL = 'http://192.168.0.175:5000/api'; 
 
 // Create axios instance with default config
 const api = axios.create({
@@ -9,7 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000, 
 });
 
 // Authentication services
@@ -48,12 +48,13 @@ export const authService = {
 // Centralized error handling
 const handleApiError = (error, defaultMessage) => {
   if (error.response) {
-    throw new Error(error.response.data.message || defaultMessage);
+    return { error: error.response.data.message || defaultMessage };
   } else if (error.request) {
-    throw new Error('No response from server. Please check your internet connection.');
+    return { error: 'No response from server. Check your internet connection.' };
   } else {
-    throw new Error('Error setting up request: ' + error.message);
+    return { error: 'Error setting up request: ' + error.message };
   }
 };
+
 
 export default api;

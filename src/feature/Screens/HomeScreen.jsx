@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
+import { useNavigation } from "@react-navigation/native";
 
 // Get screen dimensions for responsive sizin
 const { width } = Dimensions.get('window');
@@ -211,6 +212,14 @@ const DealCard = ({ item }) => (
 const HomeScreen = ({ navigation, route }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim() !== "") {
+      navigation.navigate("Search", { query: searchQuery });
+      setSearchQuery(""); // Clear input after search
+    }
+  };
   
   // Get user email from route params or use default
   const userEmail = route.params?.userEmail || '';
@@ -277,6 +286,9 @@ const HomeScreen = ({ navigation, route }) => {
               style={styles.stickySearchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
             />
             <Icon name="search" type="feather" size={20} color="#888" />
           </View>
@@ -297,6 +309,9 @@ const HomeScreen = ({ navigation, route }) => {
               style={styles.searchInput}
               placeholder="Search..."
               placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
             />
           </View>
           
