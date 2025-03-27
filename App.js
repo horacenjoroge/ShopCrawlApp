@@ -15,11 +15,12 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 // Import your screens
 import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
 import LoginScreen from './src/feature/Screens/LoginScreen';
-import HomeScreen from './src/feature/Screens/homescreen';
+import HomeScreen from './src/feature/Screens/HomeScreen';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
+import SearchScreen from './src/feature/Screens/SearchScreen';
 
-// Import new components/screens
-import SearchResultScreen from './src/feature/Screens/SearchResultScreen';
+// Import other components/screens
+import SearchResultScreen from './src/feature/Screens/SearchResult';
 import ProfileMenuOverlay from './src/feature/Screens/ProfileScreen';
 
 // Create navigators
@@ -202,8 +203,10 @@ export default function App() {
         <Stack.Navigator initialRouteName="Welcome">
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
           <Stack.Screen 
             name="SearchResults" 
             component={SearchResultsWithLoading} 
