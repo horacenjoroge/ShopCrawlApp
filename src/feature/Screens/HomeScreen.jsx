@@ -14,8 +14,9 @@ import {
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Get screen dimensions for responsive sizin
+// Get screen dimensions for responsive sizing
 const { width } = Dimensions.get('window');
 const productCardWidth = width * 0.7;
 
@@ -209,7 +210,7 @@ const DealCard = ({ item }) => (
   </Card>
 );
 
-const HomeScreen = ({ navigation, route }) => {
+const HomeScreen = ({ navigation, route = {} }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -220,12 +221,32 @@ const HomeScreen = ({ navigation, route }) => {
       setSearchQuery(""); // Clear input after search
     }
   };
+  const [userEmail, setUserEmail] = useState('');
+  const [avatarLetter, setAvatarLetter] = useState('S');
   
-  // Get user email from route params or use default
-  const userEmail = route.params?.userEmail || '';
-  
-  // Get first letter of email for avatar
-  const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : 'S';
+  // Get user data from AsyncStorage on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        // First try to get from route params if available
+        let email = route.params?.userEmail;
+        
+        // If not in route params, try AsyncStorage
+        if (!email) {
+          email = await AsyncStorage.getItem('userEmail');
+        }
+        
+        if (email) {
+          setUserEmail(email);
+          setAvatarLetter(email.charAt(0).toUpperCase());
+        }
+      } catch (error) {
+        console.error('Error getting user email:', error);
+      }
+    };
+    
+    fetchUserData();
+  }, [route.params]);
   
   // Calculate header animations
   const headerOpacity = scrollY.interpolate({
@@ -251,7 +272,7 @@ const HomeScreen = ({ navigation, route }) => {
       <View style={styles.avatarTopContainer}>
         <TouchableOpacity 
           style={styles.avatarContainer}
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => navigation.navigate('Main')}
         >
           <Text style={styles.avatarText}>{avatarLetter}</Text>
         </TouchableOpacity>

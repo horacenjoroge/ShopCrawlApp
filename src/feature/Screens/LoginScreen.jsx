@@ -78,6 +78,8 @@ const LoginScreen = () => {
     try {
       setLoading(true);
       setError('');
+      
+      console.log('Attempting login with:', { email, password: '***' });
   
       // Call login API
       const userData = await authService.login(email, password);
