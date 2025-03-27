@@ -84,7 +84,7 @@ const LoginScreen = () => {
       // Call login API
       const userData = await authService.login(email, password);
   
-      console.log('Login Response:', userData); //  Debug Response
+      console.log('Login Response:', userData);
   
       if (userData.error) {
         throw new Error(userData.error);
@@ -93,22 +93,21 @@ const LoginScreen = () => {
       // Store user data in AsyncStorage
       await AsyncStorage.setItem('userToken', userData.token);
       await AsyncStorage.setItem('userId', userData.userId);
-      await AsyncStorage.setItem('userEmail', userData.email || ''); // Ensure it's not undefined
+      // Store the email that was used for login, not from response
+      await AsyncStorage.setItem('userEmail', email);
   
       const storedEmail = await AsyncStorage.getItem('userEmail');
-      console.log('Stored Email:', storedEmail); // Check AsyncStorage
+      console.log('Stored Email:', storedEmail);
   
-      // Navigate to home only if AsyncStorage is successful
-      navigation.replace('Home', { userEmail: storedEmail });
+      // Navigate to home with the email used for login
+      navigation.replace('Home', { userEmail: email });
     } catch (err) {
-      console.log('Login Error:', err.message); // Debug Errors
+      console.log('Login Error:', err.message);
       setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }
   };
-  
-  
 
   return (
     <View style={styles.container}>

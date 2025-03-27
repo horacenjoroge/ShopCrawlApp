@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Import your screens
 import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
 import LoginScreen from './src/feature/Screens/LoginScreen';
-import HomeScreen from './src/feature/Screens/HomeScreen';
+import HomeScreen from './src/feature/Screens/HomeScreen.jsx';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
 import SearchScreen from './src/feature/Screens/SearchScreen';
 import HistoryScreen from './src/feature/Screens/HistoryScreen'; // Import your detailed HistoryScreen
