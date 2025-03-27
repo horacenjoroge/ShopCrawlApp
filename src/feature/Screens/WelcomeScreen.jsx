@@ -54,7 +54,7 @@ const WelcomeScreen = ({ navigation }) => {
 
         <Button
           mode="outlined"
-          onPress={() => navigation.navigate('Search')}
+          onPress={() => navigation.navigate('Home')}
           style={styles.guestButton}
           labelStyle={styles.guestButtonText}
         >

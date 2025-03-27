@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
+import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
@@ -164,6 +165,14 @@ const DealCard = ({ item, onSave }) => (
 const HomeScreen = ({ navigation, route = {} }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim() !== "") {
+      navigation.navigate("Search", { query: searchQuery });
+      setSearchQuery(""); // Clear input after search
+    }
+  };
   const [userEmail, setUserEmail] = useState('');
   const [avatarLetter, setAvatarLetter] = useState('S');
   const [searchQuery, setSearchQuery] = useState('');
@@ -419,7 +428,7 @@ const saveSearchToHistory = async (query) => {
               placeholderTextColor="#888"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
+              onSubmitEditing={handleSearchSubmit}
             />
             <TouchableOpacity onPress={handleSearch}>
               <Icon name="search" type="feather" size={20} color="#888" />
@@ -444,7 +453,7 @@ const saveSearchToHistory = async (query) => {
               placeholderTextColor="#888"
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
+              onSubmitEditing={handleSearchSubmit}
             />
             <TouchableOpacity onPress={handleSearch}>
               <Icon name="search" type="feather" size={24} color="#888" />
