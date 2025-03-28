@@ -8,7 +8,8 @@ import {
   Text, 
   TouchableOpacity, 
   ActivityIndicator, 
-  StyleSheet 
+  StyleSheet,
+  Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,7 +20,7 @@ import LoginScreen from './src/feature/Screens/LoginScreen';
 import HomeScreen from './src/feature/Screens/HomeScreen.jsx';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
 import SearchScreen from './src/feature/Screens/SearchScreen';
-import HistoryScreen from './src/feature/Screens/HistoryScreen'; // Import your detailed HistoryScreen
+import HistoryScreen from './src/feature/Screens/HistoryScreen';
 
 // Import other components/screens
 import SearchResultScreen from './src/feature/Screens/SearchResult';
@@ -43,22 +44,43 @@ const LoadingSpinner = ({ visible }) => {
   );
 };
 
-// Search Results Screen with Loading State
-const SearchResultsWithLoading = ({ route }) => {
+// Search Results Screen with Loading State and Custom Navigation
+const SearchResultsWithLoading = ({ route, navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   
-  // Simulate loading for demo purposes
+  // Use real loading state from HomeScreen if provided, otherwise simulate
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    if (route.params?.isLoading !== undefined) {
+      setIsLoading(route.params.isLoading);
+    } else {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [route.params]);
+  
+  // Add back button functionality
+  const handleBack = () => {
+    navigation.goBack();
+  };
   
   return (
-    <View style={{ flex: 1 }}>
-      <SearchResultScreen query={route.params?.query || ''} />
+    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
+      {/* Header with back button */}
+      <View style={styles.searchHeader}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Search Results</Text>
+      </View>
+      
+      <SearchResultScreen 
+        query={route.params?.query || ''} 
+        results={route.params?.results || []} 
+        navigation={navigation}
+      />
       <LoadingSpinner visible={isLoading} />
     </View>
   );
@@ -284,11 +306,7 @@ export default function App() {
             name="SearchResults" 
             component={SearchResultsWithLoading} 
             options={{
-              title: 'Search Results',
-              headerStyle: {
-                backgroundColor: '#1a1a1a',
-              },
-              headerTintColor: 'white',
+              headerShown: false, // Hide the default header since we're using our own
             }}
           />
         </Stack.Navigator>
@@ -320,5 +338,24 @@ const styles = StyleSheet.create({
     color: 'white',
     marginTop: 12,
     fontSize: 16,
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    paddingTop: Platform.OS === 'ios' ? 50 : 15,
+    paddingBottom: 15,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  backButton: {
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginLeft: 15,
   },
 });

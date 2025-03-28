@@ -100,7 +100,7 @@ const LoginScreen = () => {
       console.log('Stored Email:', storedEmail);
   
       // Navigate to home with the email used for login
-      navigation.replace('Home', { userEmail: email });
+     navigation.replace('Main');
     } catch (err) {
       console.log('Login Error:', err.message);
       setError(err.message || 'Failed to sign in');
