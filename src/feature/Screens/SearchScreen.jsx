@@ -1,263 +1,184 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, FlatList, Image, ActivityIndicator } from 'react-native';
 import { Icon } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
+import axios from 'axios';
+
+const SERP_API_KEY = '7adf35f97c008c6ddce7921ee949027b7b8b34fd4fa969bd54d613a413093dc1'; // Replace with your key
 
 const SearchScreen = () => {
-  const navigation = useNavigation();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [selectedStores, setSelectedStores] = useState(['All']); //
-  const [recentSearches, setRecentSearches] = useState(['Wireless Earbuds', 'Smart Watch', 'Headphones']);
-  const popularCategories = ['Electronics', 'Fashion', 'Home', 'Beauty'];
+    const navigation = useNavigation();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [selectedStores, setSelectedStores] = useState(['All']);
+    const [recentSearches, setRecentSearches] = useState(['Wireless Earbuds', 'Smart Watch', 'Headphones']);
+    const popularCategories = ['Electronics', 'Fashion', 'Home', 'Beauty'];
+    const [loading, setLoading] = useState(false);
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      // In a real app, you'd call your search API here
-      console.log('Searching for:', searchQuery, 'in stores:', selectedStores);
-      // Placeholder for search results
-      const results = [`Result 1 for "${searchQuery}"`, `Result 2 for "${searchQuery}"`];
-      setSearchResults(results);
+    const handleSearch = async () => {
+        if (searchQuery.trim()) {
+            setLoading(true);
+            try {
+                let engine = 'google_shopping';
+                if (selectedStores.length > 0 && !selectedStores.includes('All')) {
+                    engine = selectedStores[0].toLowerCase(); // Use the first selected store
+                }
 
-      // Update recent searches (avoid duplicates and limit length)
-      if (!recentSearches.includes(searchQuery)) {
-        setRecentSearches([searchQuery, ...recentSearches.slice(0, 4)]); // Keep max 5 recent searches
-      }
-    } else {
-      setSearchResults();
-    }
-  };
+                const response = await axios.get('https://serpapi.com/search.json', {
+                    params: {
+                        q: searchQuery,
+                        api_key: SERP_API_KEY,
+                        engine: engine,
+                        gl: 'ke', // Adjust as needed
+                        hl: 'en',
+                    },
+                });
 
-  const handleStoreFilter = (store) => {
-    if (store === 'All') {
-      setSelectedStores(['All']);
-    } else {
-      if (selectedStores.includes(store)) {
-        setSelectedStores(selectedStores.filter((s) => s !== store && s !== 'All'));
-      } else {
-        const newSelectedStores = selectedStores.filter((s) => s !== 'All');
-        setSelectedStores([...newSelectedStores, store]);
-      }
-    }
-  };
+                setSearchResults(response.data.shopping_results || []);
 
-  const clearSearchInput = () => {
-    setSearchQuery('');
-    setSearchResults();
-  };
+                if (!recentSearches.includes(searchQuery)) {
+                    setRecentSearches([searchQuery, ...recentSearches.slice(0, 4)]);
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                setSearchResults([]);
+            }
+            setLoading(false);
+        } else {
+            setSearchResults([]);
+        }
+    };
 
-  const handleRecentSearchPress = (item) => {
-    setSearchQuery(item);
-    handleSearch();
-  };
-
-  const clearRecentSearches = () => {
-    setRecentSearches([]);
-  };
-  
-
-  const handleCategoryPress = (category) => {
-    setSearchQuery(category);
-    handleSearch();
-  };
-
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.openDrawer()}>
-          <Icon name="menu" size={30} />
+    const renderProductItem = ({ item }) => (
+        <TouchableOpacity style={styles.productItem}>
+            <Image source={{ uri: item.thumbnail }} style={styles.productImage} resizeMode="contain" />
+            <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
+            <Text style={styles.productPrice}>{item.price}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>ShopCrawl</Text>
-        <TouchableOpacity>
-          <Icon name="user" type="font-awesome" size={24} />
-        </TouchableOpacity>
-      </View>
+    );
 
-      {/* Search Bar */}
-      <View style={styles.searchBar}>
-        <TextInput
-          placeholder="Search across multiple stores..."
-          style={styles.searchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch} // Trigger search on pressing Enter
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={clearSearchInput} style={styles.clearButton}>
-            <Icon name="close" size={20} color="gray" />
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
-          <Icon name="search" type="font-awesome" size={20} color="gray" />
-        </TouchableOpacity>
-      </View>
+    return (
+        <View style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.openDrawer()}>
+                    <Icon name="menu" size={30} />
+                </TouchableOpacity>
+                <Text style={styles.title}>ShopCrawl</Text>
+                <TouchableOpacity>
+                    <Icon name="user" type="font-awesome" size={24} />
+                </TouchableOpacity>
+            </View>
 
-      {/* Store Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storeFilters}>
-        {['All', 'Amazon', 'eBay', 'Shopify', 'Alibaba'].map((store, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.filterButton,
-              selectedStores.includes(store) || (selectedStores.includes('All') && store === 'All')
-                ? styles.filterButtonActive
-                : null,
-            ]}
-            onPress={() => handleStoreFilter(store)}
-          >
-            <Text style={styles.filterText}>{store}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            <View style={styles.searchBar}>
+                <TextInput
+                    placeholder="Search across multiple stores..."
+                    style={styles.searchInput}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    onSubmitEditing={handleSearch}
+                />
+                {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                        <Icon name="close" size={20} color="gray" />
+                    </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+                    {loading ? <ActivityIndicator color="gray" /> : <Icon name="search" type="font-awesome" size={20} color="gray" />}
+                </TouchableOpacity>
+            </View>
 
-      {/* Search Results */}
-      {searchResults.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Search Results</Text>
-          {searchResults.map((result, index) => (
-            <Text key={index} style={styles.searchResultItem}>{result}</Text>
-          ))}
+            {searchResults.length > 0 && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Search Results</Text>
+                    <FlatList
+                        data={searchResults.slice(0, 7)}
+                        renderItem={renderProductItem}
+                        keyExtractor={(item) => item.position ? item.position.toString() : Math.random().toString()}
+                        numColumns={2} // 👈 Ensures a 2-column grid
+                        columnWrapperStyle={styles.row} // 👈 Helps with spacing
+                    />
+                </View>
+            )}
         </View>
-      )}
-
-      {/* Recent Searches */}
-      {recentSearches.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Searches</Text>
-            <TouchableOpacity onPress={clearRecentSearches}>
-              <Text style={styles.clearAll}>Clear All</Text>
-            </TouchableOpacity>
-          </View>
-          {recentSearches.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.recentSearchItem} onPress={() => handleRecentSearchPress(item)}>
-              <Text>{item}</Text>
-              <Icon name="history" size={18} color="gray" />
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {/* Popular Categories */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Popular Categories</Text>
-        <View style={styles.categoriesContainer}>
-          {popularCategories.map((category, index) => (
-            <TouchableOpacity key={index} style={styles.categoryButton} onPress={() => handleCategoryPress(category)}>
-              <Text>{category}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
+    );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: 'white',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: 15,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  searchInput: {
-    flex: 1,
-    marginRight: 10,
-  },
-  clearButton: {
-    marginRight: 5,
-  },
-  searchButton: {
-    padding: 5,
-  },
-  storeFilters: {
-    flexDirection: 'row',
-    marginBottom: 15,
-  },
-  filterButton: {
-    backgroundColor: '#ddd',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    marginRight: 10,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterButtonActive: {
-    backgroundColor: '#000',
-  },
-  filterText: {
-    color: 'white',
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  recentSearchItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  categoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  categoryButton: {
-    backgroundColor: '#f0f0f0',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    alignItems: 'center',
-    width: '48%', // Adjust width for better layout
-  },
-  searchResultItem: {
-    padding: 10,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  clearAll: {
-    color: 'blue',
-    fontSize: 14,
-  },
+    container: {
+        flex: 1,
+        padding: 20,
+        backgroundColor: 'white',
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingTop: 15,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+    },
+    searchBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f0f0',
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 8,
+        marginBottom: 15,
+    },
+    searchInput: {
+        flex: 1,
+        marginRight: 10,
+    },
+    clearButton: {
+        marginRight: 5,
+    },
+    searchButton: {
+        padding: 5,
+    },
+    section: {
+        marginBottom: 20,
+        flex: 1,
+        paddingBottom: 20
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    row: {
+        justifyContent: 'space-between', // Ensures proper spacing in grid
+        marginBottom: 10,
+        paddingHorizontal: 10,
+    },
+    productItem: {
+        flex: 1,
+        backgroundColor: '#fff',
+        margin: 5, // Adjust margin to space out items
+        padding: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#eee',
+    },
+    productImage: {
+        width: 120, // 👈 Adjust image size
+        height: 120, // 👈 Make sure images are uniform
+        marginBottom: 8,
+    },
+    productTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    productPrice: {
+        fontSize: 14,
+        color: 'green',
+        marginTop: 5,
+    },
 });
 
 export default SearchScreen;
