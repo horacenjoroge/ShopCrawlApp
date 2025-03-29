@@ -9,7 +9,8 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
-  Modal
+  Modal,
+  Linking
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { Icon as RNEIcon } from '@rneui/themed';
@@ -28,6 +29,14 @@ const AMAZON_API_CONFIG = {
   }
 };
 
+// Default search terms for featured products
+const DEFAULT_SEARCH_TERMS = [
+  'Best smart phones', 
+  'Top rated headphones', 
+  'Fitness trackers',
+  'Popular laptops'
+];
+
 const SearchResultScreen = ({ query = '', results = [], navigation }) => {
   const [searchQuery, setSearchQuery] = useState(query);
   const [products, setProducts] = useState([]);
@@ -37,6 +46,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [savedProducts, setSavedProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
 
   // Load saved products from AsyncStorage
   useEffect(() => {
@@ -52,6 +62,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     };
     
     loadSavedProducts();
+    fetchFeaturedProducts();
   }, []);
 
   // Handle initial load of results and query
@@ -63,7 +74,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     
     // Initialize products state on first load
     if (results && results.length > 0 && products.length === 0) {
-      console.log('Setting initial products from results props');
+      console.log('Setting initial products from results props:', results.length);
       setProducts(results);
       
       // Extract unique stores from results
@@ -114,6 +125,51 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     }
   };
 
+  // Fetch featured products for modals from random search terms
+  const fetchFeaturedProducts = async () => {
+    try {
+      console.log('Fetching featured products...');
+      // Pick a random search term from the defaults
+      const randomTerm = DEFAULT_SEARCH_TERMS[Math.floor(Math.random() * DEFAULT_SEARCH_TERMS.length)];
+      
+      console.log(`Fetching featured products for "${randomTerm}"`);
+      const results = await searchSerpApi(randomTerm);
+      
+      if (results && results.length > 0) {
+        console.log(`Found ${results.length} featured products`);
+        setFeaturedProducts(results);
+      } else {
+        console.log('No featured products found, using fallback');
+        // Fallback to hardcoded featured product if API fails
+        setFeaturedProducts([{
+          id: 'featured-fallback',
+          title: 'Featured Product',
+          specs: 'This is a featured product that you might be interested in.',
+          price: '$99.99',
+          image: 'https://via.placeholder.com/300',
+          store: 'ShopCrawl',
+          product_link: 'https://google.com',
+          rating: 4.5,
+          reviews: '(123 reviews)'
+        }]);
+      }
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      // Set fallback featured product
+      setFeaturedProducts([{
+        id: 'featured-fallback',
+        title: 'Featured Product',
+        specs: 'This is a featured product that you might be interested in.',
+        price: '$99.99',
+        image: 'https://via.placeholder.com/300',
+        store: 'ShopCrawl',
+        product_link: 'https://google.com',
+        rating: 4.5,
+        reviews: '(123 reviews)'
+      }]);
+    }
+  };
+
   // Search using SERP API
   const searchSerpApi = async (searchTerm) => {
     try {
@@ -141,8 +197,9 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
             price: item.price || '$0',
             image: item.thumbnail || 'https://via.placeholder.com/150',
             specs: item.snippet || '',
-            rating: parseFloat(item.rating) || 4.0,
-            reviews: item.reviews ? `(${item.reviews} reviews)` : '(0 reviews)'
+            rating: parseFloat(item.rating) || 0, // Default to 0 for invalid ratings
+            reviews: item.reviews ? `(${item.reviews} reviews)` : '(0 reviews)',
+            product_link: item.link || `https://www.google.com/search?q=${encodeURIComponent(item.title || searchTerm)}`
           };
         });
         
@@ -179,15 +236,16 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
       });
       
       if (response.data && response.data.data && response.data.data.products) {
-        const results = response.data.data.products.slice(0, 10).map(product => ({
-          id: product.asin,
+        const results = response.data.data.products.slice(0, 10).map((product, index) => ({
+          id: product.asin || `amazon-${index}-${Date.now()}`,
           store: 'Amazon',
           title: product.title || 'Unknown Product',
           price: product.price_string || product.original_price || '$0',
           image: product.image_url || (product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150'),
           specs: product.description || '',
-          rating: product.rating || 4.0,
-          reviews: product.reviews ? `(${product.reviews.total_reviews} reviews)` : '(0 reviews)'
+          rating: product.rating || 0,
+          reviews: product.reviews ? `(${product.reviews.total_reviews} reviews)` : '(0 reviews)',
+          product_link: product.url || `https://www.amazon.com/s?k=${encodeURIComponent(product.title || searchTerm)}`
         }));
         
         console.log(`Found ${results.length} results from Amazon API`);
@@ -206,6 +264,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     setLoading(true);
     
     try {
+      console.log('Fetching products for:', searchTerm);
       // First try SERP API
       let results = await searchSerpApi(searchTerm);
       
@@ -217,8 +276,10 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
       
       // If we have results, update state
       if (results.length > 0) {
+        console.log(`Found ${results.length} products`);
         setProducts(results);
       } else {
+        console.log('No results found, using fallback');
         // If no results were found, add a fallback message or use mock data
         setProducts([{
           id: 'no-results',
@@ -249,6 +310,26 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     }
   };
 
+  // Open product link in browser
+  const openProductLink = (url) => {
+    console.log('Opening URL:', url);
+    if (url) {
+      Linking.openURL(url).catch(err => {
+        console.error('Could not open URL:', err);
+        // Fallback to a common search if the URL is invalid
+        Linking.openURL('https://www.google.com/search?q=' + encodeURIComponent(selectedProduct?.title || ''));
+      });
+    } else if (selectedProduct?.title) {
+      // If no URL but we have a product name, search for it
+      console.log('No URL available, searching for product name');
+      Linking.openURL('https://www.google.com/search?q=' + encodeURIComponent(selectedProduct.title));
+    } else {
+      console.log('No URL or product name available');
+      // Last resort fallback
+      Linking.openURL('https://www.google.com');
+    }
+  };
+
   const handleSearch = () => {
     if (searchQuery.trim()) {
       fetchProducts(searchQuery);
@@ -259,6 +340,61 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     setSelectedStore(store);
   };
 
+  // Show a random featured product in modal
+  const showRandomFeaturedProduct = async () => {
+    console.log('Showing random featured product');
+    console.log('Current featured products:', featuredProducts.length);
+    
+    if (featuredProducts.length > 0) {
+      const randomIndex = Math.floor(Math.random() * featuredProducts.length);
+      const product = featuredProducts[randomIndex];
+      console.log('Selected product:', product.title);
+      
+      setSelectedProduct(product);
+      setModalVisible(true);
+    } else {
+      console.log('No featured products available, fetching new ones');
+      // Create a fallback product in case fetching fails
+      const fallbackProduct = {
+        id: 'fallback-1',
+        title: 'Fallback Featured Product',
+        specs: 'We could not load a featured product right now. Please try again later.',
+        price: '$99.99',
+        image: 'https://via.placeholder.com/300',
+        store: 'ShopCrawl',
+        product_link: 'https://google.com',
+        rating: 4.5,
+        reviews: '(0 reviews)'
+      };
+      
+      try {
+        // Fetch and wait for results directly, don't rely on state update
+        const results = await searchSerpApi(DEFAULT_SEARCH_TERMS[Math.floor(Math.random() * DEFAULT_SEARCH_TERMS.length)]);
+        
+        if (results && results.length > 0) {
+          // Use the results directly instead of accessing state
+          const randomIndex = Math.floor(Math.random() * results.length);
+          const product = results[randomIndex];
+          console.log('Selected new product:', product.title);
+          
+          // Update state for future use
+          setFeaturedProducts(results);
+          
+          // Show the selected product
+          setSelectedProduct(product);
+        } else {
+          // If no results, use fallback
+          setSelectedProduct(fallbackProduct);
+        }
+      } catch (error) {
+        console.error('Error fetching featured products for modal:', error);
+        setSelectedProduct(fallbackProduct);
+      }
+      
+      setModalVisible(true);
+    }
+  };
+
   // Get filtered products based on selected store
   const getFilteredProducts = () => {
     if (selectedStore === 'All') {
@@ -267,19 +403,22 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     return products.filter(product => product.store === selectedStore);
   };
 
-  // Star rating component
+  // Star rating component with proper error handling
   const StarRating = ({ rating }) => {
-    const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.5;
+    // Handle invalid ratings by defaulting to zero
+    const safeRating = !isNaN(rating) && rating >= 0 ? rating : 0;
+    
+    const fullStars = Math.floor(safeRating);
+    const halfStar = safeRating % 1 >= 0.5;
     const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
     
     return (
       <View style={styles.starContainer}>
-        {[...Array(fullStars)].map((_, i) => (
+        {Array.from({ length: fullStars }).map((_, i) => (
           <Icon key={`full-${i}`} name="star" size={16} color="#FFC107" />
         ))}
-        {halfStar && <Icon name="star-half" size={16} color="#FFC107" />}
-        {[...Array(emptyStars)].map((_, i) => (
+        {halfStar && <Icon key="half" name="star-half" size={16} color="#FFC107" />}
+        {Array.from({ length: emptyStars }).map((_, i) => (
           <Icon key={`empty-${i}`} name="star-border" size={16} color="#FFC107" />
         ))}
       </View>
@@ -306,47 +445,52 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
     </TouchableOpacity>
   );
 
-  // Render horizontal product card (swipeable)
-  const renderProductCard = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.productCard}
-      onPress={() => {
-        setSelectedProduct(item);
-        setModalVisible(true);
-      }}
-    >
-      <Image 
-        source={{ uri: item.image }} 
-        style={styles.productImage}
-        resizeMode="cover"
-      />
-      {/* Bookmark icon */}
+  // Render products with proper keys
+  const renderProducts = () => {
+    const filteredProducts = getFilteredProducts();
+    
+    return filteredProducts.map((item, index) => (
       <TouchableOpacity 
-        style={styles.bookmarkButton} 
-        onPress={() => handleSaveProduct(item)}
+        key={`product-${item.id || index}`}
+        style={styles.productCard}
+        onPress={() => {
+          setSelectedProduct(item);
+          setModalVisible(true);
+        }}
       >
-        <RNEIcon 
-          name={isProductSaved(item.id) ? "bookmark" : "bookmark-outline"} 
-          type="material-community" 
-          size={24} 
-          color="#FFC107" 
+        <Image 
+          source={{ uri: item.image }} 
+          style={styles.productImage}
+          resizeMode="cover"
         />
+        {/* Bookmark icon with improved visibility */}
+        <TouchableOpacity 
+          style={styles.bookmarkButton} 
+          onPress={() => handleSaveProduct(item)}
+        >
+          <RNEIcon 
+            name={isProductSaved(item.id) ? "bookmark" : "bookmark-outline"} 
+            type="material-community" 
+            size={24} 
+            color="#FFC107" 
+          />
+        </TouchableOpacity>
+        
+        <View style={styles.productInfo}>
+          <View style={styles.storeContainer}>
+            <Text style={styles.storeName}>{item.store}</Text>
+            <Text style={styles.priceText}>{item.price}</Text>
+          </View>
+          <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.productSpecs} numberOfLines={2}>{item.specs}</Text>
+          <View style={styles.ratingRow}>
+            <StarRating rating={item.rating} />
+            <Text style={styles.reviewCount}>{item.reviews}</Text>
+          </View>
+        </View>
       </TouchableOpacity>
-      
-      <View style={styles.productInfo}>
-        <View style={styles.storeContainer}>
-          <Text style={styles.storeName}>{item.store}</Text>
-          <Text style={styles.priceText}>{item.price}</Text>
-        </View>
-        <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.productSpecs} numberOfLines={2}>{item.specs}</Text>
-        <View style={styles.ratingRow}>
-          <StarRating rating={item.rating} />
-          <Text style={styles.reviewCount}>{item.reviews}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+    ));
+  };
 
   return (
     <View style={styles.container}>
@@ -364,6 +508,15 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
           <Icon name="search" size={24} color="#FFC107" />
         </TouchableOpacity>
       </View>
+      
+      {/* Featured banner */}
+      <TouchableOpacity
+        style={styles.featuredBanner}
+        onPress={showRandomFeaturedProduct}
+      >
+        <Text style={styles.featuredText}>Discover something new!</Text>
+        <Text style={styles.featuredSubtext}>Tap to see featured products</Text>
+      </TouchableOpacity>
       
       {/* Store filters */}
       <View style={styles.filtersContainer}>
@@ -384,16 +537,19 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
         </Text>
       </View>
       
-      {/* Loading indicator */}
+      {/* Loading indicator or Products */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FFC107" />
           <Text style={styles.loadingText}>Searching stores...</Text>
         </View>
       ) : (
-        /* Products list - horizontal swipeable cards */
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productsContainer}>
-          {getFilteredProducts().map(item => renderProductCard({ item }))}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.productsContainer}
+        >
+          {renderProducts()}
         </ScrollView>
       )}
       
@@ -416,46 +572,73 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
               <Icon name="close" size={24} color="#fff" />
             </TouchableOpacity>
             
-            {/* Product image */}
-            {selectedProduct && (
-              <View style={styles.modalProductContainer}>
-                <Image
-                  source={{ uri: selectedProduct.image }}
-                  style={styles.modalProductImage}
-                  resizeMode="contain"
-                />
-                
-                {/* Bookmark button */}
-                <TouchableOpacity
-                  style={styles.modalBookmarkButton}
-                  onPress={() => handleSaveProduct(selectedProduct)}
-                >
-                  <RNEIcon
-                    name={isProductSaved(selectedProduct.id) ? "bookmark" : "bookmark-outline"}
-                    type="material-community"
-                    size={28}
-                    color="#FFC107"
+            {/* Product details */}
+            {selectedProduct ? (
+              <ScrollView style={styles.modalScrollView}>
+                <View style={styles.modalProductContainer}>
+                  <Image
+                    source={{ uri: selectedProduct.image }}
+                    style={styles.modalProductImage}
+                    resizeMode="contain"
                   />
-                </TouchableOpacity>
-                
-                {/* Product details */}
-                <View style={styles.modalProductDetails}>
-                  <Text style={styles.modalProductTitle}>{selectedProduct.title}</Text>
-                  <View style={styles.modalPriceRow}>
-                    <Text style={styles.modalStoreName}>{selectedProduct.store}</Text>
-                    <Text style={styles.modalProductPrice}>{selectedProduct.price}</Text>
-                  </View>
-                  <Text style={styles.modalProductSpecs}>{selectedProduct.specs}</Text>
-                  <View style={styles.modalRatingRow}>
-                    <StarRating rating={selectedProduct.rating} />
-                    <Text style={styles.modalReviewCount}>{selectedProduct.reviews}</Text>
-                  </View>
                   
-                  {/* View on store button */}
-                  <TouchableOpacity style={styles.viewOnStoreButton}>
-                    <Text style={styles.viewOnStoreText}>View on {selectedProduct.store}</Text>
+                  {/* Bookmark button with improved visibility */}
+                  <TouchableOpacity
+                    style={styles.modalBookmarkButton}
+                    onPress={() => handleSaveProduct(selectedProduct)}
+                  >
+                    <RNEIcon
+                      name={isProductSaved(selectedProduct.id) ? "bookmark" : "bookmark-outline"}
+                      type="material-community"
+                      size={28}
+                      color="#FFC107"
+                    />
                   </TouchableOpacity>
+                  
+                  <View style={styles.modalProductDetails}>
+                    <Text style={styles.modalProductTitle}>{selectedProduct.title}</Text>
+                    
+                    <View style={styles.modalPriceRow}>
+                      <Text style={styles.modalStoreName}>{selectedProduct.store}</Text>
+                      <Text style={styles.modalProductPrice}>{selectedProduct.price}</Text>
+                    </View>
+                    
+                    <Text style={styles.modalProductSpecs}>
+                      {selectedProduct.specs || 'No description available for this product.'}
+                    </Text>
+                    
+                    <View style={styles.modalRatingRow}>
+                      <StarRating rating={selectedProduct.rating} />
+                      <Text style={styles.modalReviewCount}>{selectedProduct.reviews}</Text>
+                    </View>
+                    
+                    {/* Save product button */}
+                    <TouchableOpacity 
+                      style={styles.saveProductButton}
+                      onPress={() => handleSaveProduct(selectedProduct)}
+                    >
+                      <Text style={styles.saveProductText}>
+                        {isProductSaved(selectedProduct.id) ? 'Remove from Saved' : 'Save Product'}
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    {/* View on store button */}
+                    <TouchableOpacity 
+                      style={styles.viewOnStoreButton}
+                      onPress={() => openProductLink(selectedProduct.product_link)}
+                    >
+                      <Text style={styles.viewOnStoreText}>
+                        View on {selectedProduct.store}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
+              </ScrollView>
+            ) : (
+              // Fallback content if no product is selected
+              <View style={styles.modalFallbackContainer}>
+                <ActivityIndicator size="large" color="#FFC107" />
+                <Text style={styles.modalFallbackText}>Loading product details...</Text>
               </View>
             )}
           </View>
@@ -489,6 +672,25 @@ const styles = StyleSheet.create({
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  featuredBanner: {
+    backgroundColor: '#FFC107',
+    margin: 16,
+    marginTop: 4,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  featuredText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000',
+    marginBottom: 4,
+  },
+  featuredSubtext: {
+    fontSize: 12,
+    color: '#333',
   },
   filtersContainer: {
     marginBottom: 8,
@@ -601,13 +803,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 15,
     top: 15,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)', // Darker background for better visibility
     borderRadius: 20,
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 2,
+    zIndex: 10, // Ensure it's on top
+  },
+  modalScrollView: {
+    width: '100%',
   },
   modalContainer: {
     flex: 1,
@@ -646,13 +851,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     top: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)', // Improved visibility
     borderRadius: 25,
     width: 50,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 2,
+    zIndex: 10,
   },
   modalProductDetails: {
     padding: 20,
@@ -683,7 +888,7 @@ const styles = StyleSheet.create({
     color: '#CCC',
     fontSize: 16,
     marginBottom: 15,
-    lineHeight: 22,
+    lineHeight:  22,
   },
   modalRatingRow: {
     flexDirection: 'row',
@@ -695,6 +900,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 8,
   },
+  saveProductButton: {
+    backgroundColor: '#444',
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  saveProductText: {
+    color: '#FFC107',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   viewOnStoreButton: {
     backgroundColor: '#FFC107',
     paddingVertical: 12,
@@ -705,6 +922,17 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  modalFallbackContainer: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalFallbackText: {
+    fontSize: 16,
+    color: '#ccc',
+    marginTop: 15,
+    textAlign: 'center',
   },
 });
 
