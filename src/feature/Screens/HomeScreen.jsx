@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
@@ -10,10 +7,12 @@ import {
   TouchableOpacity, 
   TextInput, 
   Dimensions, 
-  Share,
-  Platform,
-  Animated,
-  ActivityIndicator
+  Share, 
+  Platform, 
+  Animated, 
+  ActivityIndicator,
+  Modal,
+  Linking
 } from 'react-native';
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
@@ -21,11 +20,9 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-// Get screen dimensions for responsive sizing
 const { width } = Dimensions.get('window');
 const productCardWidth = width * 0.7;
 
-// Sample data for categories to search
 const categories = [
   { id: 1, name: 'Best protein powder', color: '#FFDF85' },
   { id: 2, name: 'Top-rated jogging strollers', color: '#FFA082' },
@@ -33,7 +30,6 @@ const categories = [
   { id: 4, name: 'Women\'s hiking boots', color: '#FFB6B6' },
 ];
 
-// API configurations
 const AMAZON_API_CONFIG = {
   baseURL: 'https://real-time-amazon-data.p.rapidapi.com',
   headers: {
@@ -42,28 +38,67 @@ const AMAZON_API_CONFIG = {
   }
 };
 
-// SERP API key
 const SERP_API_KEY = '7adf35f97c008c6ddce7921ee949027b7b8b34fd4fa969bd54d613a413093dc1';
 
-// Default product ASINs to fetch if no search is performed
 const DEFAULT_PRODUCT_ASINS = [
-  'B07ZPKBL9V', // Example ASIN
+  'B07ZPKBL9V',
   'B08RCJCGDJ',
   'B08PF1Y7Q5',
   'B07VKG1LFZ'
 ];
 
-// Search category component
+const FALLBACK_PRODUCTS = [
+  {
+    id: 'fallback1',
+    name: 'Premium Protein Powder',
+    description: 'High-quality protein supplement',
+    price: '$29.99',
+    image: 'https://via.placeholder.com/300',
+    store: 'Amazon',
+    productUrl: 'https://www.amazon.com',
+    category: 'Fitness',
+    recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
+  },
+  {
+    id: 'fallback2',
+    name: 'All-Terrain Jogging Stroller',
+    description: 'Durable stroller for active parents',
+    price: '$199.99',
+    image: 'https://via.placeholder.com/300',
+    store: 'Amazon',
+    productUrl: 'https://www.amazon.com',
+    category: 'Baby',
+    recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
+  }
+];
+
+const cacheProduct = async (asin, product) => {
+  try {
+    await AsyncStorage.setItem(`product_${asin}`, JSON.stringify(product));
+  } catch (e) {
+    console.error('Error caching product:', e);
+  }
+};
+
+const getCachedProduct = async (asin) => {
+  try {
+    const cached = await AsyncStorage.getItem(`product_${asin}`);
+    return cached ? JSON.parse(cached) : null;
+  } catch (e) {
+    console.error('Error getting cached product:', e);
+    return null;
+  }
+};
+
 const CategoryPill = ({ category, onPress }) => (
   <TouchableOpacity 
-    style={[styles.categoryPill, { backgroundColor: category.color }]}
+    style={[styles.categoryPill, { backgroundColor: category.color }]} 
     onPress={() => onPress(category.name)}
   >
     <Text style={styles.categoryPillText}>{category.name}</Text>
   </TouchableOpacity>
 );
 
-// Recommendation badge component
 const RecommendBadge = ({ icon }) => (
   <View style={styles.recommendBadge}>
     {typeof icon === 'string' ? (
@@ -74,13 +109,12 @@ const RecommendBadge = ({ icon }) => (
   </View>
 );
 
-// Share feature component
 const ShareFeature = () => {
   const onShare = async () => {
     try {
       await Share.share({
         message: 'Check out these great deals on ShopCrawl!',
-        url: 'https://shopcrawl.com', // Replace with your actual URL
+        url: 'https://shopcrawl.com',
         title: 'ShopCrawl Deals'
       });
     } catch (error) {
@@ -111,76 +145,68 @@ const ShareFeature = () => {
   );
 };
 
-// Product card component
-const DealCard = ({ item, onSave }) => (
-  <Card style={[styles.dealCard, { width: productCardWidth }]}>
-    {/* Discount badge */}
-    {item.discount && (
-      <View style={styles.discountBadge}>
-        <Text style={styles.discountText}>{item.discount}</Text>
-      </View>
-    )}
-    
-    {/* Bookmark icon */}
-    <TouchableOpacity style={styles.bookmarkButton} onPress={() => onSave(item)}>
-      <Icon name="bookmark-outline" type="material-community" size={24} color="#888" />
-    </TouchableOpacity>
-    
-    <Card.Cover 
-      source={{ uri: item.image }} 
-      style={styles.dealImage} 
-    />
-    
-    <Card.Content style={styles.dealContent}>
-      <Text style={styles.dealName}>{item.name}</Text>
-      <Text style={styles.dealDescription} numberOfLines={2}>
-        {item.description || 'No description available'}
-      </Text>
-      
-      {/* Recommendations */}
-      {item.recommendations && item.recommendations.length > 0 && (
-        <View style={styles.recommendRow}>
-          <Text style={styles.recommendText}>RECOMMENDED BY:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.recommendBadges}>
-              {item.recommendations.map((rec, index) => (
-                <RecommendBadge key={index} icon={rec.icon} />
-              ))}
-              {item.recommendations.length > 4 && (
-                <View style={styles.moreBadge}>
-                  <Text style={styles.moreText}>+{item.recommendations.length - 4}</Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
+const DealCard = ({ item, onSave, onPress }) => (
+  <TouchableOpacity onPress={() => onPress(item)}>
+    <Card style={[styles.dealCard, { width: productCardWidth }]}>
+      {item.discount && (
+        <View style={styles.discountBadge}>
+          <Text style={styles.discountText}>{item.discount}</Text>
         </View>
       )}
-      
-      {/* Store and price */}
-      <View style={styles.priceRow}>
-        <View style={styles.storeContainer}>
-          <Image 
-            source={require('../../../assets/amazon.jpg')} 
-            style={styles.storeIcon} 
-            resizeMode="contain" 
-          />
-          <Text style={styles.storeName}>{item.store || 'Amazon'}</Text>
+      <TouchableOpacity style={styles.bookmarkButton} onPress={() => onSave(item)}>
+        <Icon name="bookmark-outline" type="material-community" size={24} color="#888" />
+      </TouchableOpacity>
+      <Card.Cover 
+        source={{ uri: item.image }} 
+        style={styles.dealImage} 
+      />
+      <Card.Content style={styles.dealContent}>
+        <Text style={styles.dealName}>{item.name}</Text>
+        <Text style={styles.dealDescription} numberOfLines={2}>
+          {item.description || 'No description available'}
+        </Text>
+        {item.recommendations && item.recommendations.length > 0 && (
+          <View style={styles.recommendRow}>
+            <Text style={styles.recommendText}>RECOMMENDED BY:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.recommendBadges}>
+                {item.recommendations.map((rec, index) => (
+                  <RecommendBadge key={index} icon={rec.icon} />
+                ))}
+                {item.recommendations.length > 4 && (
+                  <View style={styles.moreBadge}>
+                    <Text style={styles.moreText}>+{item.recommendations.length - 4}</Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        )}
+        <View style={styles.priceRow}>
+          <View style={styles.storeContainer}>
+            <Image 
+              source={require('../../../assets/amazon.jpg')} 
+              style={styles.storeIcon} 
+              resizeMode="contain" 
+            />
+            <Text style={styles.storeName}>{item.store || 'Amazon'}</Text>
+          </View>
+          <View style={styles.priceContainer}>
+            {item.originalPrice && (
+              <Text style={styles.originalPrice}>{item.originalPrice}</Text>
+            )}
+            <Text style={styles.discountedPrice}>{item.price}</Text>
+          </View>
         </View>
-        <View style={styles.priceContainer}>
-          {item.originalPrice && (
-            <Text style={styles.originalPrice}>{item.originalPrice}</Text>
-          )}
-          <Text style={styles.discountedPrice}>{item.price}</Text>
-        </View>
-      </View>
-    </Card.Content>
-    
-    {/* Category footer */}
-    <TouchableOpacity style={styles.categoryContainer}>
-      <Text style={styles.categoryText}>{typeof item.category === 'object' ? item.category.name : (item.category || 'Amazon Product')}</Text>
-      <Icon name="arrow-right" type="feather" size={18} color="#000" />
-    </TouchableOpacity>
-  </Card>
+      </Card.Content>
+      <TouchableOpacity style={styles.categoryContainer}>
+        <Text style={styles.categoryText}>
+          {typeof item.category === 'object' ? item.category.name : (item.category || 'Amazon Product')}
+        </Text>
+        <Icon name="arrow-right" type="feather" size={18} color="#000" />
+      </TouchableOpacity>
+    </Card>
+  </TouchableOpacity>
 );
 
 const HomeScreen = ({ navigation, route = {} }) => {
@@ -192,342 +218,290 @@ const HomeScreen = ({ navigation, route = {} }) => {
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const handleSearchSubmit = () => {
     if (searchQuery.trim() !== "") {
       handleSearch();
     }
   };
-  
-  // Get user data from AsyncStorage on component mount
+
   const fetchUserData = async () => {
     try {
-      // First try to get from route params if available
-      let email = route.params?.userEmail;
-      console.log('Email from route params:', email);
-      
-      // If not in route params, try AsyncStorage
-      if (!email) {
-        email = await AsyncStorage.getItem('userEmail');
-        console.log('Email from AsyncStorage:', email);
-      }
-      
+      let email = route.params?.userEmail || await AsyncStorage.getItem('userEmail');
       if (email) {
-        console.log('Setting user email to:', email);
         setUserEmail(email);
-        const firstLetter = email.charAt(0).toUpperCase();
-        console.log('Setting avatar letter to:', firstLetter);
-        setAvatarLetter(firstLetter);
-      } else {
-        console.log('No email found');
+        setAvatarLetter(email.charAt(0).toUpperCase());
       }
     } catch (error) {
       console.error('Error getting user email:', error);
     }
   };
-  
+
   useEffect(() => {
     fetchUserData();
     fetchDeals();
   }, [route.params]);
-  
-  // Refresh user data when the screen comes into focus
+
   useFocusEffect(
     useCallback(() => {
-      console.log('Screen focused, refreshing user data');
       fetchUserData();
       return () => {};
     }, [])
   );
-  
-  // Function to search products using SERP API
+
   const searchSerpApi = async (query) => {
     try {
-      console.log(`Searching for "${query}" using SERP API`);
-      
       const response = await axios.get('https://serpapi.com/search.json', {
-        params: {
-          q: query,
-          api_key: SERP_API_KEY,
-          engine: 'google_shopping',
-          gl: 'us', // Use 'us' for better results
-          hl: 'en',
-        },
+        params: { q: query, api_key: SERP_API_KEY, engine: 'google_shopping', gl: 'us', hl: 'en' },
       });
-      
-      console.log('SERP API response received');
-      
-      // Check if we have shopping results
-      if (response.data && response.data.shopping_results && Array.isArray(response.data.shopping_results)) {
-        const results = response.data.shopping_results.map((item, index) => {
-          return {
-            id: `serp-${index}-${Date.now()}`,
-            name: item.title || 'Unknown Product',
-            description: item.snippet || '',
-            price: item.price || '$0',
-            originalPrice: '',
-            image: item.thumbnail || 'https://via.placeholder.com/300',
-            store: item.source || 'Google Shopping',
-            category: query,
-            recommendations: [
-              { id: '1', icon: require('../../../assets/amazon.jpg') }
-            ]
-          };
-        });
-        
-        console.log(`Found ${results.length} results from SERP API`);
-        return results;
-      } else {
-        console.log('No shopping results found in SERP API response');
-        return [];
+
+      if (response.data?.shopping_results?.length) {
+        return response.data.shopping_results.map((item, index) => ({
+          id: `serp-${index}-${Date.now()}`,
+          name: item.title || 'Unknown Product',
+          description: item.snippet || '',
+          price: item.price || '$0',
+          originalPrice: '',
+          image: item.thumbnail || 'https://via.placeholder.com/300',
+          store: item.source || 'Google Shopping',
+          category: query,
+          productUrl: item.link,
+          recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
+        }));
       }
+      return [];
     } catch (error) {
       console.error('SERP API search error:', error);
       return [];
     }
   };
-  
-  // Function to search Amazon API
+
   const searchAmazonProducts = async (query) => {
     try {
-      console.log(`Searching for "${query}" using Amazon API`);
-      
       const response = await axios.get(`${AMAZON_API_CONFIG.baseURL}/search`, {
         headers: AMAZON_API_CONFIG.headers,
-        params: {
-          query: query,
-          country: 'US',
-          page: '1'
-        }
+        params: { query, country: 'US', page: '1' }
       });
-      
-      if (response.data && response.data.data && response.data.data.products) {
-        const results = response.data.data.products.slice(0, 5).map(product => ({
+
+      if (response.data?.data?.products) {
+        const products = response.data.data.products.slice(0, 5).map(product => ({
           id: product.asin,
           name: product.title || 'Unknown Product',
           description: product.description || '',
           originalPrice: product.original_price || '',
           price: product.price_string || product.original_price || '$0',
           discount: product.is_on_sale ? `${product.discount_percentage || ''}% off!` : null,
-          image: product.image_url || (product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/300'),
+          image: product.image_url || (product.images?.[0] || 'https://via.placeholder.com/300'),
           store: 'Amazon',
           category: typeof product.category === 'object' ? product.category.name : (product.category || query),
-          recommendations: [
-            { id: '1', icon: require('../../../assets/amazon.jpg') }
-          ]
+          productUrl: product.product_url,
+          recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
         }));
-        
-        console.log(`Found ${results.length} results from Amazon API`);
-        return results;
+        products.forEach(p => cacheProduct(p.id, p));
+        return products;
       }
-      
-      console.log('No products found in Amazon API response');
       return [];
     } catch (error) {
       console.error('Amazon API search error:', error);
       return [];
     }
   };
-  
-  // Combined search function
+
   const searchProducts = async (query) => {
     setError(null);
-    
-    // First try SERP API
     let results = await searchSerpApi(query);
-    
-    // If SERP failed, try Amazon
     if (results.length === 0) {
-      console.log('No SERP results, trying Amazon API');
       results = await searchAmazonProducts(query);
     }
-    
     if (results.length === 0) {
       setError(`No results found for "${query}"`);
     }
-    
     return results;
   };
-  
-  // Fetch deals from API
-  const fetchDeals = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch multiple product details in parallel
-      const productPromises = DEFAULT_PRODUCT_ASINS.map(asin => fetchProductDetails(asin));
-      const productsData = await Promise.all(productPromises);
-      
-      // Filter out any null results
-      const validProducts = productsData.filter(product => product !== null);
-      
-      if (validProducts.length === 0) {
-        throw new Error('No products found');
-      }
-      
-      setDeals(validProducts);
-    } catch (err) {
-      console.error('Error fetching deals:', err);
-      setError('Failed to load deals');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Function to fetch product details from Amazon API
+
   const fetchProductDetails = async (asin) => {
+    const cached = await getCachedProduct(asin);
+    if (cached) return cached;
+
     try {
       const response = await axios.get(`${AMAZON_API_CONFIG.baseURL}/product-details`, {
         headers: AMAZON_API_CONFIG.headers,
-        params: {
-          asin: asin,
-          country: 'US'
-        }
+        params: { asin, country: 'US' }
       });
-      
-      if (response.data && response.data.data) {
+
+      if (response.data?.data) {
         const productData = response.data.data;
-        
-        // Format product data for our app
-        return {
+        const product = {
           id: asin,
           name: productData.title || 'Unknown Product',
           description: productData.description || '',
           originalPrice: productData.original_price || '',
           price: productData.price_string || productData.original_price || '$0',
           discount: productData.is_on_sale ? `${productData.discount_percentage || ''}% off!` : null,
-          image: productData.images && productData.images.length > 0 ? productData.images[0] : 'https://via.placeholder.com/300',
+          image: productData.images?.[0] || 'https://via.placeholder.com/300',
           store: 'Amazon',
           category: typeof productData.category === 'object' ? productData.category.name : (productData.category || 'Amazon Product'),
-          recommendations: [
-            { id: '1', icon: require('../../../assets/amazon.jpg') }
-          ]
+          productUrl: productData.product_url || `https://www.amazon.com/dp/${asin}`,
+          recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
         };
+        await cacheProduct(asin, product);
+        return product;
       }
-      
       throw new Error('Invalid product data received');
-      
     } catch (error) {
-      console.error(`Error fetching product details for ASIN ${asin}:`, error);
-      // Return a fallback product
+      console.error(`Primary endpoint failed for ASIN ${asin}:`, error.message);
+      
+      if (error.response?.status === 429) {
+        console.log(`429 received for ASIN ${asin}, attempting search endpoint fallback`);
+        try {
+          const searchResponse = await axios.get(`${AMAZON_API_CONFIG.baseURL}/search`, {
+            headers: AMAZON_API_CONFIG.headers,
+            params: { query: asin, country: 'US', page: '1' }
+          });
+
+          if (searchResponse.data?.data?.products?.length > 0) {
+            const product = searchResponse.data.data.products[0];
+            const formattedProduct = {
+              id: asin,
+              name: product.title || 'Unknown Product',
+              description: product.description || '',
+              originalPrice: product.original_price || '',
+              price: product.price_string || product.original_price || '$0',
+              discount: product.is_on_sale ? `${product.discount_percentage || ''}% off!` : null,
+              image: product.image_url || product.images?.[0] || 'https://via.placeholder.com/300',
+              store: 'Amazon',
+              category: typeof product.category === 'object' ? product.category.name : (product.category || 'Amazon Product'),
+              productUrl: product.product_url || `https://www.amazon.com/dp/${asin}`,
+              recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
+            };
+            await cacheProduct(asin, formattedProduct);
+            return formattedProduct;
+          }
+        } catch (searchError) {
+          console.error(`Search fallback failed for ASIN ${asin}:`, searchError.message);
+        }
+      }
+
+      console.log('Error details:', {
+        asin,
+        status: error.response?.status,
+        message: error.message,
+        headers: error.response?.headers
+      });
+
       return {
         id: asin,
         name: 'Product Information Unavailable',
-        description: 'Could not retrieve product details at this time.',
+        description: 'Could not retrieve product details due to API limits.',
         price: 'N/A',
         image: 'https://via.placeholder.com/300',
         store: 'Amazon',
-        category: 'Unknown'
+        category: 'Unknown',
+        productUrl: `https://www.amazon.com/dp/${asin}`
       };
     }
   };
-  
-  // Save a product to user's saved items
+
+  const fetchDeals = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const productPromises = DEFAULT_PRODUCT_ASINS.map(async (asin) => {
+        try {
+          return await fetchProductDetails(asin);
+        } catch (err) {
+          console.error(`Skipping ASIN ${asin} due to error:`, err.message);
+          return null;
+        }
+      });
+
+      const productsData = await Promise.all(productPromises);
+      let validProducts = productsData.filter(product => product !== null);
+
+      if (validProducts.length === 0) {
+        console.log('No products loaded from API, using fallback data');
+        setError('Showing sample products due to API limits. Search functionality still available.');
+        validProducts = FALLBACK_PRODUCTS;
+      } else if (validProducts.length < DEFAULT_PRODUCT_ASINS.length) {
+        setError(`Loaded ${validProducts.length} of ${DEFAULT_PRODUCT_ASINS.length} products. Using fallback for unavailable items.`);
+        validProducts = [...validProducts, ...FALLBACK_PRODUCTS.slice(0, DEFAULT_PRODUCT_ASINS.length - validProducts.length)];
+      }
+
+      setDeals(validProducts);
+    } catch (err) {
+      console.error('Unexpected error in fetchDeals:', err);
+      setError('Failed to load deals. Showing sample products.');
+      setDeals(FALLBACK_PRODUCTS);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveProduct = async (product) => {
     try {
-      // Get existing saved products from AsyncStorage
       const savedProductsJson = await AsyncStorage.getItem('savedProducts');
       let savedProducts = savedProductsJson ? JSON.parse(savedProductsJson) : [];
-      
-      // Check if product is already saved
       const isAlreadySaved = savedProducts.some(item => item.id === product.id);
       
       if (isAlreadySaved) {
-        // Remove from saved products
         savedProducts = savedProducts.filter(item => item.id !== product.id);
       } else {
-        // Add to saved products
         savedProducts.push(product);
       }
       
-      // Save back to AsyncStorage
       await AsyncStorage.setItem('savedProducts', JSON.stringify(savedProducts));
-      
-      // Show feedback to the user (could use a toast or snackbar)
       console.log(isAlreadySaved ? 'Product removed from saved items' : 'Product saved');
     } catch (err) {
       console.error('Error saving product:', err);
     }
   };
-  
-  // Handle search submission
+
   const handleSearch = async () => {
     if (searchQuery.trim()) {
-      // Save search query to history via API
       saveSearchToHistory(searchQuery);
-      
-      // Show loading state
       setLoading(true);
-      
       try {
-        // Search for products
         const results = await searchProducts(searchQuery);
-        
-        // Update deals to show search results immediately
         if (results.length > 0) {
           setDeals(results);
         }
-        
-        // Also navigate to search results
-        navigation.navigate('SearchResults', { 
-          query: searchQuery,
-          results: results
-        });
+        navigation.navigate('SearchResults', { query: searchQuery, results });
       } catch (error) {
         console.error('Search error:', error);
         setError('Something went wrong with your search. Please try again.');
       } finally {
         setLoading(false);
-        // Clear the search input
         setSearchQuery('');
       }
     }
   };
-  
-  // Save search query to history
+
   const saveSearchToHistory = async (query) => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
       
-      if (!token) {
-        console.log('No auth token found, skipping history save');
-        return;
-      }
-      
-      // Make API call to save the search query
       await axios.post('http://192.168.100.54:3000/api/history', 
         { query },
         { headers: { 'x-auth-token': token } }
       );
-      
-      console.log('Search saved to history:', query);
     } catch (err) {
       console.error('Error saving search to history:', err);
     }
   };
-  
-  // Handle category selection
+
   const handleCategorySelect = async (categoryName) => {
     saveSearchToHistory(categoryName);
-    
-    // Show loading state
     setLoading(true);
-    
     try {
-      // Search for products
       const results = await searchProducts(categoryName);
-      
-      // Update deals to show category results
       if (results.length > 0) {
         setDeals(results);
       }
-      
-      // Navigate to search results
-      navigation.navigate('SearchResults', { 
-        query: categoryName,
-        results: results
-      });
+      navigation.navigate('SearchResults', { query: categoryName, results });
     } catch (error) {
       console.error('Category search error:', error);
       setError('Something went wrong with your search. Please try again.');
@@ -535,60 +509,63 @@ const HomeScreen = ({ navigation, route = {} }) => {
       setLoading(false);
     }
   };
-  
-  // Calculate header animations
+
+  const showRandomProduct = (item) => {
+    setSelectedProduct(item);
+    setModalVisible(true);
+  };
+
+  const openProductUrl = async (url) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        console.log("Don't know how to open URI: " + url);
+      }
+    } catch (error) {
+      console.error('Error opening URL:', error);
+    }
+  };
+
   const headerOpacity = scrollY.interpolate({
     inputRange: [stickyHeaderPosition.current, stickyHeaderPosition.current + 50],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
 
-  // Handle scroll events
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     { useNativeDriver: false }
   );
 
-  // Save the position of the "Today's Deals" section for sticky header
   const onTodaysDealsLayout = (event) => {
     stickyHeaderPosition.current = event.nativeEvent.layout.y - 60;
   };
 
   return (
     <View style={styles.container}>
-      {/* Avatar at top right */}
       <View style={styles.avatarTopContainer}>
         <TouchableOpacity 
-          style={styles.avatarContainer}
+          style={styles.avatarContainer} 
           onPress={() => navigation.navigate('Main')}
         >
           <Text style={styles.avatarText}>{avatarLetter}</Text>
         </TouchableOpacity>
       </View>
-      
-      {/* Sticky search bar - appears when scrolling down */}
+
       <Animated.View 
-        style={[
-          styles.stickyHeader, 
-          { 
-            opacity: headerOpacity,
-            transform: [{
-              translateY: headerOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-50, 0],
-              }),
-            }]
-          }
-        ]}
+        style={[styles.stickyHeader, {
+          opacity: headerOpacity,
+          transform: [{
+            translateY: headerOpacity.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-50, 0],
+            }),
+          }]
+        }]}
       >
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: '#FFFFFF',
-        }} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF' }} />
         <View style={styles.stickySearchBarWrapper}>
           <View style={styles.stickySearchBar}>
             <TextInput
@@ -605,14 +582,13 @@ const HomeScreen = ({ navigation, route = {} }) => {
           </View>
         </View>
       </Animated.View>
-      
-      <Animated.ScrollView 
-        style={styles.scrollView} 
+
+      <Animated.ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        {/* Search section with pink background */}
         <View style={styles.searchSection}>
           <Text style={styles.searchTitle}>What are you shopping for?</Text>
           <View style={styles.searchBar}>
@@ -628,8 +604,6 @@ const HomeScreen = ({ navigation, route = {} }) => {
               <Icon name="search" type="feather" size={24} color="#888" />
             </TouchableOpacity>
           </View>
-          
-          {/* Categories horizontal scroll */}
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
@@ -639,55 +613,94 @@ const HomeScreen = ({ navigation, route = {} }) => {
               <CategoryPill 
                 key={category.id} 
                 category={category} 
-                onPress={handleCategorySelect}
+                onPress={handleCategorySelect} 
               />
             ))}
           </ScrollView>
         </View>
-        
-        {/* Share feature card */}
+
         <ShareFeature />
-        
-        {/* Today's Deals section */}
+
         <View style={styles.headerContainer} onLayout={onTodaysDealsLayout}>
           <Text style={styles.headerText}>Today's Deals on Vetted Picks</Text>
         </View>
-        
-        {/* Deals list - horizontal scrolling */}
+
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#FFC107" />
             <Text style={styles.loadingText}>Loading deals...</Text>
           </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchDeals}>
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
         ) : (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            decelerationRate="fast"
-            snapToInterval={productCardWidth + 30}
-            contentContainerStyle={styles.dealsScrollContainer}
-          >
-            {deals.map(deal => (
-              <DealCard 
-                key={deal.id} 
-                item={deal} 
-                onSave={handleSaveProduct}
-              />
-            ))}
-          </ScrollView>
+          <>
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity style={styles.retryButton} onPress={fetchDeals}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {deals.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                pagingEnabled
+                decelerationRate="fast"
+                snapToInterval={productCardWidth + 30}
+                contentContainerStyle={styles.dealsScrollContainer}
+              >
+                {deals.map(deal => (
+                  <DealCard 
+                    key={deal.id} 
+                    item={deal} 
+                    onSave={handleSaveProduct}
+                    onPress={showRandomProduct}
+                  />
+                ))}
+              </ScrollView>
+            ) : null}
+          </>
         )}
-        
-        {/* Additional space at bottom for tab navigation */}
         <View style={{ height: 20 }} />
       </Animated.ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            {selectedProduct && (
+              <>
+                <Image 
+                  source={{ uri: selectedProduct.image }} 
+                  style={styles.modalImage} 
+                  resizeMode="contain"
+                />
+                <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
+                <Text style={styles.modalPrice}>{selectedProduct.price}</Text>
+                <Text style={styles.modalDescription}>
+                  {selectedProduct.description || 'No description available'}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.visitButton}
+                  onPress={() => openProductUrl(selectedProduct.productUrl)}
+                >
+                  <Text style={styles.visitButtonText}>Visit Product Page</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.closeButtonText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -762,7 +775,7 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     backgroundColor: '#FFB6B6',
-    paddingTop: 80, // Space for avatar
+    paddingTop: 80,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 25,
@@ -849,7 +862,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     padding: 20,
     paddingBottom: 10,
-    backgroundColor: '#f7f5f2', // Match background so it blends in
+    backgroundColor: '#f7f5f2',
   },
   headerText: {
     fontSize: 32,
@@ -1017,10 +1030,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   errorContainer: {
-    height: 300,
-    justifyContent: 'center',
+    padding: 20,
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   errorText: {
     color: '#ff6b6b',
@@ -1035,6 +1046,68 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#333',
+    fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalPrice: {
+    fontSize: 20,
+    color: '#006156',
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  visitButton: {
+    backgroundColor: '#006156',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    marginBottom: 10,
+  },
+  visitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#999',
+  },
+  closeButtonText: {
+    color: '#999',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
