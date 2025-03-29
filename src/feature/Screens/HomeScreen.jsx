@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
@@ -30,7 +33,7 @@ const categories = [
   { id: 4, name: 'Women\'s hiking boots', color: '#FFB6B6' },
 ];
 
-// Amazon API configuration
+// API configurations
 const AMAZON_API_CONFIG = {
   baseURL: 'https://real-time-amazon-data.p.rapidapi.com',
   headers: {
@@ -38,6 +41,9 @@ const AMAZON_API_CONFIG = {
     'x-rapidapi-key': 'fa261c00d5msh6541b9a512b5ab6p164a0bjsnf5e94495e08d'
   }
 };
+
+// SERP API key
+const SERP_API_KEY = '7adf35f97c008c6ddce7921ee949027b7b8b34fd4fa969bd54d613a413093dc1';
 
 // Default product ASINs to fetch if no search is performed
 const DEFAULT_PRODUCT_ASINS = [
@@ -234,6 +240,141 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }, [])
   );
   
+  // Function to search products using SERP API
+  const searchSerpApi = async (query) => {
+    try {
+      console.log(`Searching for "${query}" using SERP API`);
+      
+      const response = await axios.get('https://serpapi.com/search.json', {
+        params: {
+          q: query,
+          api_key: SERP_API_KEY,
+          engine: 'google_shopping',
+          gl: 'us', // Use 'us' for better results
+          hl: 'en',
+        },
+      });
+      
+      console.log('SERP API response received');
+      
+      // Check if we have shopping results
+      if (response.data && response.data.shopping_results && Array.isArray(response.data.shopping_results)) {
+        const results = response.data.shopping_results.map((item, index) => {
+          return {
+            id: `serp-${index}-${Date.now()}`,
+            name: item.title || 'Unknown Product',
+            description: item.snippet || '',
+            price: item.price || '$0',
+            originalPrice: '',
+            image: item.thumbnail || 'https://via.placeholder.com/300',
+            store: item.source || 'Google Shopping',
+            category: query,
+            recommendations: [
+              { id: '1', icon: require('../../../assets/amazon.jpg') }
+            ]
+          };
+        });
+        
+        console.log(`Found ${results.length} results from SERP API`);
+        return results;
+      } else {
+        console.log('No shopping results found in SERP API response');
+        return [];
+      }
+    } catch (error) {
+      console.error('SERP API search error:', error);
+      return [];
+    }
+  };
+  
+  // Function to search Amazon API
+  const searchAmazonProducts = async (query) => {
+    try {
+      console.log(`Searching for "${query}" using Amazon API`);
+      
+      const response = await axios.get(`${AMAZON_API_CONFIG.baseURL}/search`, {
+        headers: AMAZON_API_CONFIG.headers,
+        params: {
+          query: query,
+          country: 'US',
+          page: '1'
+        }
+      });
+      
+      if (response.data && response.data.data && response.data.data.products) {
+        const results = response.data.data.products.slice(0, 5).map(product => ({
+          id: product.asin,
+          name: product.title || 'Unknown Product',
+          description: product.description || '',
+          originalPrice: product.original_price || '',
+          price: product.price_string || product.original_price || '$0',
+          discount: product.is_on_sale ? `${product.discount_percentage || ''}% off!` : null,
+          image: product.image_url || (product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/300'),
+          store: 'Amazon',
+          category: typeof product.category === 'object' ? product.category.name : (product.category || query),
+          recommendations: [
+            { id: '1', icon: require('../../../assets/amazon.jpg') }
+          ]
+        }));
+        
+        console.log(`Found ${results.length} results from Amazon API`);
+        return results;
+      }
+      
+      console.log('No products found in Amazon API response');
+      return [];
+    } catch (error) {
+      console.error('Amazon API search error:', error);
+      return [];
+    }
+  };
+  
+  // Combined search function
+  const searchProducts = async (query) => {
+    setError(null);
+    
+    // First try SERP API
+    let results = await searchSerpApi(query);
+    
+    // If SERP failed, try Amazon
+    if (results.length === 0) {
+      console.log('No SERP results, trying Amazon API');
+      results = await searchAmazonProducts(query);
+    }
+    
+    if (results.length === 0) {
+      setError(`No results found for "${query}"`);
+    }
+    
+    return results;
+  };
+  
+  // Fetch deals from API
+  const fetchDeals = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch multiple product details in parallel
+      const productPromises = DEFAULT_PRODUCT_ASINS.map(asin => fetchProductDetails(asin));
+      const productsData = await Promise.all(productPromises);
+      
+      // Filter out any null results
+      const validProducts = productsData.filter(product => product !== null);
+      
+      if (validProducts.length === 0) {
+        throw new Error('No products found');
+      }
+      
+      setDeals(validProducts);
+    } catch (err) {
+      console.error('Error fetching deals:', err);
+      setError('Failed to load deals');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Function to fetch product details from Amazon API
   const fetchProductDetails = async (asin) => {
     try {
@@ -282,69 +423,6 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
   
-  // Function to search products on Amazon
-  const searchAmazonProducts = async (query) => {
-    try {
-      const response = await axios.get(`${AMAZON_API_CONFIG.baseURL}/search`, {
-        headers: AMAZON_API_CONFIG.headers,
-        params: {
-          query: query,
-          country: 'US',
-          page: '1'
-        }
-      });
-      
-      if (response.data && response.data.data && response.data.data.products) {
-        return response.data.data.products.slice(0, 5).map(product => ({
-          id: product.asin,
-          name: product.title || 'Unknown Product',
-          description: product.description || '',
-          originalPrice: product.original_price || '',
-          price: product.price_string || product.original_price || '$0',
-          discount: product.is_on_sale ? `${product.discount_percentage || ''}% off!` : null,
-          image: product.image_url || product.images[0] || 'https://via.placeholder.com/300',
-          store: 'Amazon',
-          category: typeof product.category === 'object' ? product.category.name : (product.category || query),
-          recommendations: [
-            { id: '1', icon: require('../../../assets/amazon.jpg') }
-          ]
-        }));
-      }
-      
-      throw new Error('Invalid search results received');
-      
-    } catch (error) {
-      console.error(`Error searching for "${query}":`, error);
-      return [];
-    }
-  };
-  
-  // Fetch deals from Amazon API
-  const fetchDeals = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch multiple product details in parallel
-      const productPromises = DEFAULT_PRODUCT_ASINS.map(asin => fetchProductDetails(asin));
-      const productsData = await Promise.all(productPromises);
-      
-      // Filter out any null results
-      const validProducts = productsData.filter(product => product !== null);
-      
-      if (validProducts.length === 0) {
-        throw new Error('No products found');
-      }
-      
-      setDeals(validProducts);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error fetching deals:', err);
-      setError('Failed to load deals');
-      setLoading(false);
-    }
-  };
-  
   // Save a product to user's saved items
   const handleSaveProduct = async (product) => {
     try {
@@ -383,27 +461,27 @@ const HomeScreen = ({ navigation, route = {} }) => {
       setLoading(true);
       
       try {
-        // Search for products with this query
-        const results = await searchAmazonProducts(searchQuery);
+        // Search for products
+        const results = await searchProducts(searchQuery);
         
+        // Update deals to show search results immediately
         if (results.length > 0) {
-          // Update deals to show search results immediately
           setDeals(results);
         }
         
-        setLoading(false);
+        // Also navigate to search results
+        navigation.navigate('SearchResults', { 
+          query: searchQuery,
+          results: results
+        });
       } catch (error) {
-        console.error('Error searching products:', error);
+        console.error('Search error:', error);
+        setError('Something went wrong with your search. Please try again.');
+      } finally {
         setLoading(false);
+        // Clear the search input
+        setSearchQuery('');
       }
-      
-      // Also navigate to search results screen
-      navigation.navigate('SearchResults', { 
-        query: searchQuery,
-      });
-      
-      // Clear the search input
-      setSearchQuery('');
     }
   };
   
@@ -437,22 +515,25 @@ const HomeScreen = ({ navigation, route = {} }) => {
     setLoading(true);
     
     try {
-      // Search for products in this category
-      const categoryProducts = await searchAmazonProducts(categoryName);
+      // Search for products
+      const results = await searchProducts(categoryName);
       
-      if (categoryProducts.length > 0) {
-        // Update deals to show category results
-        setDeals(categoryProducts);
+      // Update deals to show category results
+      if (results.length > 0) {
+        setDeals(results);
       }
       
-      setLoading(false);
+      // Navigate to search results
+      navigation.navigate('SearchResults', { 
+        query: categoryName,
+        results: results
+      });
     } catch (error) {
-      console.error('Error searching category products:', error);
+      console.error('Category search error:', error);
+      setError('Something went wrong with your search. Please try again.');
+    } finally {
       setLoading(false);
     }
-    
-    // Also navigate to search results
-    navigation.navigate('SearchResults', { query: categoryName });
   };
   
   // Calculate header animations
