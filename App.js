@@ -19,7 +19,8 @@ import LoginScreen from './src/feature/Screens/LoginScreen';
 import HomeScreen from './src/feature/Screens/HomeScreen.jsx';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
 import SearchScreen from './src/feature/Screens/SearchScreen';
-import HistoryScreen from './src/feature/Screens/HistoryScreen'; // Import your detailed HistoryScreen
+import HistoryScreen from './src/feature/Screens/HistoryScreen';
+import ComparisonScreen from './src/feature/Screens/ComparisonScreen';
 
 // Import other components/screens
 import SearchResultScreen from './src/feature/Screens/SearchResult';
@@ -277,25 +278,20 @@ export default function App() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={HomeScreenWrapper} options={{ headerShown: false }} />
-          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen name="Home" component={MainTabs} options={{ headerShown: false }} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ComparisonScreen" component={ComparisonScreen} />
           <Stack.Screen 
             name="SearchResults" 
             component={SearchResultsWithLoading} 
-            options={{
-              title: 'Search Results',
-              headerStyle: {
-                backgroundColor: '#1a1a1a',
-              },
-              headerTintColor: 'white',
-            }}
+            options={{ headerShown: false }} 
           />
         </Stack.Navigator>
       </SafeAreaView>
     </NavigationContainer>
   );
 }
+
 
 const styles = StyleSheet.create({
   spinnerOverlay: {
@@ -320,5 +316,24 @@ const styles = StyleSheet.create({
     color: 'white',
     marginTop: 12,
     fontSize: 16,
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
+    paddingTop: 40,
+    paddingBottom: 15,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  backButton: {
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginLeft: 15,
   },
 });

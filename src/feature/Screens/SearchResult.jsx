@@ -1,323 +1,611 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
   TextInput,
   StyleSheet,
   Image,
+  ActivityIndicator,
+  Modal,
+  Linking,
+  Dimensions,
   ScrollView
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { Icon as RNEIcon } from '@rneui/themed';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SearchResultScreen = ({ query = '', navigation }) => {
-  const [searchQuery, setSearchQuery] = useState(query);
+const { width } = Dimensions.get('window');
+const API_BASE = 'http://192.168.0.175:5000/api/search';
+
+const SearchResultScreen = ({ route = {} }) => {
+  const [searchQuery, setSearchQuery] = useState(route.params?.query || '');
   const [products, setProducts] = useState([]);
   const [selectedStore, setSelectedStore] = useState('All');
+  const [loading, setLoading] = useState(false);
+  const [stores, setStores] = useState(['All']);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [savedProducts, setSavedProducts] = useState([]);
+  const [filters, setFilters] = useState({
+    sortBy: 'mbScore',
+    minRating: 3.5
+  });
 
-  // Sample stores 
-  const stores = ['All', 'Aliexpress', 'Shopify', 'Walmart', 'Amazon', 'eBay'];
-
+  // Load saved products
   useEffect(() => {
-    // Fetch products when component mounts or query changes
-    fetchProducts(query || searchQuery);
-  }, [query]);
+    const loadSavedProducts = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('savedProducts');
+        setSavedProducts(saved ? JSON.parse(saved) : []);
+      } catch (error) {
+        console.error('Error loading saved products:', error);
+      }
+    };
+    loadSavedProducts();
+  }, []);
 
-  const fetchProducts = async (searchTerm) => {
-    // This would be replaced with your actual API call
-    // Simulating API response with mock data
-    
-    const mockData = [
-      {
-        id: '1',
-        store: 'Aliexpress',
-        title: 'Samsung Galaxy A56 5G (128GB)',
-        price: '$399.99',
-        image: 'https://via.placeholder.com/150',
-        specs: '6.6" FHD+ Display, 50MP Camera, 5000mAh Battery',
-        rating: 4.5,
-        reviews: '(3.8k reviews)'
-      },
-      {
-        id: '2',
-        store: 'JD.com',
-        title: 'Samsung Galaxy A56 5G (256GB)',
-        price: '$459.99',
-        image: 'https://via.placeholder.com/150',
-        specs: '8GB RAM, Dual SIM, Factory Unlocked',
-        rating: 4,
-        reviews: '(2.4k reviews)'
-      },
-      {
-        id: '3',
-        store: 'Walmart',
-        title: 'Samsung Galaxy A56 5G (512GB)',
-        price: '$479.99',
-        image: 'https://via.placeholder.com/150',
-        specs: '12GB RAM, International Version, Dual SIM',
-        rating: 5,
-        reviews: '(1.9k reviews)'
-      },
-      {
-        id: '4',
-        store: 'Amazon',
-        title: 'Dell S3222DGM Gaming Monitor',
-        price: '$300',
-        image: 'https://via.placeholder.com/150',
-        specs: '32-inch QHD monitor with 165Hz refresh rate',
-        rating: 4.5,
-        reviews: '(108 reviews)'
-      },
-      {
-        id: '5',
-        store: 'Bestbuy',
-        title: 'Nike Dunk Low Retro',
-        price: '$115.00',
-        image: 'https://via.placeholder.com/150',
-        specs: 'White/White/Black, Men\'s Casual Shoes',
-        rating: 4.9,
-        reviews: '(39 reviews)'
-      },
-    ];
-    
-    setProducts(mockData);
+  // Fetch products
+  const fetchProducts = async (query) => {
+    setLoading(true);
+    try {
+      const params = {
+        q: query,
+        ...filters
+      };
+      const response = await axios.get(API_BASE, { params });
+      const results = response.data.products || [];
+
+      // Unique store list
+      const uniqueStores = ['All', ...new Set(results.map(p => p.source))];
+      setStores(uniqueStores);
+
+      setProducts(results);
+    } catch (error) {
+      console.error('API Error:', error);
+      alert('Failed to fetch products. Check your connection.');
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSearch = () => {
-    fetchProducts(searchQuery);
+  // Handle initial search
+  useEffect(() => {
+    if (searchQuery) {
+      fetchProducts(searchQuery);
+    }
+  }, [filters]);
+
+  // Save/unsave product
+  const handleSaveProduct = async (product) => {
+    try {
+      const isSaved = savedProducts.some(p => p.id === product.id);
+      const updated = isSaved
+        ? savedProducts.filter(p => p.id !== product.id)
+        : [...savedProducts, product];
+
+      await AsyncStorage.setItem('savedProducts', JSON.stringify(updated));
+      setSavedProducts(updated);
+    } catch (error) {
+      console.error('Save error:', error);
+    }
   };
 
-  const handleStoreFilter = (store) => {
-    setSelectedStore(store);
-    // In a real implementation, you would filter products by store
-  };
-
-  // Render horizontal product card (swipeable)
-  const renderProductCard = ({ item }) => (
-    <TouchableOpacity style={styles.productCard}>
-      <Image 
-        source={{ uri: item.image }} 
-        style={styles.productImage}
-        resizeMode="cover"
-      />
-      <View style={styles.productInfo}>
-        <View style={styles.storeContainer}>
-          <Text style={styles.storeName}>{item.store}</Text>
-          <Text style={styles.priceText}>{item.price}</Text>
-        </View>
-        <Text style={styles.productTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.productSpecs} numberOfLines={2}>{item.specs}</Text>
-        <View style={styles.ratingRow}>
-          <StarRating rating={item.rating} />
-          <Text style={styles.reviewCount}>{item.reviews}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  // Star rating component
-  const StarRating = ({ rating }) => {
-    const fullStars = Math.floor(rating);
-    const halfStar = rating % 1 >= 0.5;
-    const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
-    
-    return (
-      <View style={styles.starContainer}>
-        {[...Array(fullStars)].map((_, i) => (
-          <Icon key={`full-${i}`} name="star" size={16} color="#FFC107" />
-        ))}
-        {halfStar && <Icon name="star-half" size={16} color="#FFC107" />}
-        {[...Array(emptyStars)].map((_, i) => (
-          <Icon key={`empty-${i}`} name="star-border" size={16} color="#FFC107" />
-        ))}
-      </View>
-    );
-  };
-
-  // Render store filter buttons
-  const renderStoreButton = ({ item }) => (
-    <TouchableOpacity 
-      style={[
-        styles.storeButton,
-        selectedStore === item && styles.selectedStoreButton
-      ]}
-      onPress={() => handleStoreFilter(item)}
+  // Product card
+  const ProductCard = ({ product }) => (
+    <TouchableOpacity
+      style={styles.productCard}
+      onPress={() => {
+        setSelectedProduct(product);
+        setModalVisible(true);
+      }}
     >
-      <Text 
-        style={[
-          styles.storeButtonText,
-          selectedStore === item && styles.selectedStoreButtonText
-        ]}
-      >
-        {item}
-      </Text>
+      {/* Image */}
+      <View style={styles.imageWrapper}>
+        <Image source={{ uri: product.thumbnail }} style={styles.productImage} />
+        {/* MB/CB Scores */}
+        <View style={styles.scoreBadge}>
+          <Text style={styles.scoreText}>MB: {product.mbScore?.toFixed(2)}</Text>
+          <Text style={styles.scoreText}>CB: {product.cbScore?.toFixed(2)}</Text>
+        </View>
+
+        {/* Bookmark */}
+        <TouchableOpacity
+          style={styles.bookmarkButton}
+          onPress={() => handleSaveProduct(product)}
+        >
+          <RNEIcon
+            name={savedProducts.some(p => p.id === product.id) ? "bookmark" : "bookmark-outline"}
+            type="material-community"
+            size={22}
+            color="#FFD700"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Info */}
+      <View style={styles.cardInfo}>
+        <Text style={styles.storeName}>{product.source}</Text>
+        <Text style={styles.productTitle} numberOfLines={2}>
+          {product.title}
+        </Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceText}>${product.price}</Text>
+          <Text style={styles.shippingText}> + ${product.shipping} shipping</Text>
+        </View>
+        <View style={styles.ratingRow}>
+          <StarRating rating={product.rating} />
+          <Text style={styles.reviewCount}>({product.reviews} reviews)</Text>
+        </View>
+      </View>
     </TouchableOpacity>
   );
 
+  // Render
   return (
     <View style={styles.container}>
-      {/* Search bar */}
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>ShopCrawl</Text>
+        <Text style={styles.headerSubtitle}>
+          Your intelligent shopping assistant for computing Marginal Benefit (MB) and Cost-Benefit (CB) analysis.
+        </Text>
+      </View>
+
+      {/* Search */}
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search across multiple stores..."
-          placeholderTextColor="#999"
+          placeholder="Search products..."
+          placeholderTextColor="#aaa"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
+          onSubmitEditing={() => fetchProducts(searchQuery)}
         />
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Icon name="search" size={24} color="#FFC107" />
+        <TouchableOpacity style={styles.searchButton} onPress={() => fetchProducts(searchQuery)}>
+          <Icon name="search" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
-      
+
       {/* Store filters */}
-      <View style={styles.filtersContainer}>
+      <View style={styles.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {stores.map((store, idx) => {
+            const isActive = selectedStore === store;
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.filterPill, isActive && styles.filterPillActive]}
+                onPress={() => setSelectedStore(store)}
+              >
+                <Text style={[styles.filterText, isActive && styles.filterTextActive]}>
+                  {store}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Results */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FFD700" />
+          <Text style={styles.loadingText}>Analyzing products...</Text>
+        </View>
+      ) : (
         <FlatList
-          horizontal
-          data={stores}
-          renderItem={renderStoreButton}
-          keyExtractor={(item) => item}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.storeList}
+          data={
+            selectedStore === 'All'
+              ? products
+              : products.filter((p) => p.source === selectedStore)
+          }
+          renderItem={({ item }) => <ProductCard product={item} />}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={styles.resultsContainer}
         />
-      </View>
-      
-      {/* Products section title */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
-          Results for "{query || searchQuery || 'All Products'}"
-        </Text>
-      </View>
-      
-      {/* Products list - horizontal swipeable cards */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productsContainer}>
-        {products.map(item => renderProductCard({ item }))}
-      </ScrollView>
+      )}
+
+      {/* Product Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {selectedProduct && (
+              <>
+                <ScrollView style={{ flex: 1 }}>
+                  {/* Header Image */}
+                  <Image
+                    source={{ uri: selectedProduct.thumbnail }}
+                    style={styles.modalImage}
+                  />
+                  <View style={styles.modalBody}>
+                    <Text style={styles.modalProductTitle}>
+                      {selectedProduct.title}
+                    </Text>
+                    <View style={styles.modalPriceRow}>
+                      <Text style={styles.modalPriceText}>
+                        ${selectedProduct.price}
+                      </Text>
+                      <Text style={styles.modalShippingText}>
+                        + ${selectedProduct.shipping} shipping
+                      </Text>
+                    </View>
+
+                    {/* Scores */}
+                    <View style={styles.scoresRow}>
+                      <Text style={styles.scoresText}>
+                        MB: {selectedProduct.mbScore?.toFixed(2)}
+                      </Text>
+                      <Text style={styles.scoresText}>
+                        CB: {selectedProduct.cbScore?.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    {/* Payment, rating, etc. */}
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Rating:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <StarRating rating={selectedProduct.rating} />
+                        <Text style={[styles.detailValue, { marginLeft: 6 }]}>
+                          ({selectedProduct.reviews} reviews)
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Store:</Text>
+                      <Text style={styles.detailValue}>{selectedProduct.source}</Text>
+                    </View>
+
+                    {/* Compare Section (demo) */}
+                    <View style={styles.compareContainer}>
+                      <Text style={styles.compareHeading}>Compare with other options:</Text>
+                      <Text style={styles.compareText}>
+                        E.g., cost differences, shipping, rating, payment methods, etc.
+                      </Text>
+                    </View>
+                  </View>
+                </ScrollView>
+
+                {/* Footer Buttons */}
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={styles.modalCloseButtonText}>Close</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.modalBuyButton}
+                    onPress={() => Linking.openURL(selectedProduct.link)}
+                  >
+                    <Text style={styles.modalBuyButtonText}>
+                      View on {selectedProduct.source}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+// Star Rating Component
+const StarRating = ({ rating }) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+
+  return (
+    <View style={{ flexDirection: 'row' }}>
+      {[...Array(5)].map((_, i) => {
+        if (i < fullStars) {
+          return <Icon key={i} name="star" size={16} color="#FFD700" />;
+        } else if (i === fullStars && hasHalfStar) {
+          return <Icon key={i} name="star-half" size={16} color="#FFD700" />;
+        } else {
+          return <Icon key={i} name="star-border" size={16} color="#FFD700" />;
+        }
+      })}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  // Container
   container: {
     flex: 1,
     backgroundColor: '#121212',
   },
+
+  // Header
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 16,
+    backgroundColor: '#1C1C1C',
+    elevation: 3,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    marginBottom: 6,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#ccc',
+    lineHeight: 18,
+  },
+
+  // Search
   searchContainer: {
     flexDirection: 'row',
-    margin: 16,
+    marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 8,
     backgroundColor: '#2A2A2A',
     borderRadius: 8,
+    alignItems: 'center',
   },
   searchInput: {
     flex: 1,
-    height: 50,
-    paddingHorizontal: 16,
+    height: 48,
+    paddingHorizontal: 12,
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
   },
   searchButton: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
+    backgroundColor: '#333',
     justifyContent: 'center',
     alignItems: 'center',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
   },
-  filtersContainer: {
-    marginBottom: 8,
-  },
-  storeList: {
-    paddingHorizontal: 12,
-  },
-  storeButton: {
+
+  // Store Filters
+  filterContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 4,
+    paddingVertical: 10,
+  },
+  filterPill: {
     backgroundColor: '#2A2A2A',
     borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginRight: 8,
+    elevation: 2,
   },
-  selectedStoreButton: {
-    backgroundColor: '#FFC107',
+  filterPillActive: {
+    backgroundColor: '#FFD700',
   },
-  storeButtonText: {
-    color: 'white',
+  filterText: {
+    color: '#fff',
     fontSize: 14,
   },
-  selectedStoreButtonText: {
+  filterTextActive: {
     color: '#000',
-  },
-  sectionHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  sectionTitle: {
-    color: 'white',
-    fontSize: 18,
     fontWeight: 'bold',
   },
-  productsContainer: {
-    flexGrow: 0,
-    height: 400,
-    paddingLeft: 16,
-    marginTop: 16,
+
+  // Loading
+  loadingContainer: {
+    marginTop: 50,
+    alignItems: 'center',
   },
+  loadingText: {
+    color: '#FFD700',
+    marginTop: 10,
+    fontSize: 16,
+  },
+
+  // Product List
+  resultsContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 80,
+  },
+
+  // Product Card
   productCard: {
-    width: 300,
-    height: 380,
-    marginRight: 16,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#1C1C1C',
     borderRadius: 12,
+    marginBottom: 16,
     overflow: 'hidden',
+    elevation: 3,
+  },
+  imageWrapper: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#333',
+    position: 'relative',
   },
   productImage: {
     width: '100%',
-    height: 180,
-    backgroundColor: '#444',
+    height: '100%',
+    resizeMode: 'cover',
   },
-  productInfo: {
-    padding: 16,
-    flex: 1,
+  scoreBadge: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 6,
+    padding: 6,
   },
-  storeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+  scoreText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  bookmarkButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardInfo: {
+    padding: 12,
   },
   storeName: {
-    color: '#FFC107',
-    fontSize: 14,
+    color: '#FFD700',
+    fontSize: 13,
     fontWeight: 'bold',
-  },
-  priceText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 4,
   },
   productTitle: {
-    color: 'white',
+    color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
     marginBottom: 8,
+    fontWeight: 'bold',
   },
-  productSpecs: {
-    color: '#CCC',
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  priceText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  shippingText: {
+    color: '#999',
     fontSize: 14,
-    marginBottom: 12,
-    flex: 1,
+    marginLeft: 4,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  starContainer: {
-    flexDirection: 'row',
-    marginRight: 8,
+    marginTop: 2,
   },
   reviewCount: {
     color: '#999',
+    fontSize: 13,
+    marginLeft: 4,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: width * 0.9,
+    height: '85%',
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalImage: {
+    width: '100%',
+    height: 220,
+    resizeMode: 'cover',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  modalProductTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalPriceText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalShippingText: {
+    color: '#ccc',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  scoresRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  scoresText: {
+    color: '#FFD700',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginRight: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 6,
+  },
+  detailLabel: {
+    color: '#ccc',
+    fontSize: 14,
+  },
+  detailValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  compareContainer: {
+    marginTop: 16,
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 8,
+  },
+  compareHeading: {
+    color: '#FFD700',
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  compareText: {
+    color: '#ccc',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#444',
+    backgroundColor: '#2A2A2A',
+  },
+  modalCloseButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#444',
+  },
+  modalCloseButtonText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  modalBuyButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#FFD700',
+  },
+  modalBuyButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
     fontSize: 14,
   },
 });
