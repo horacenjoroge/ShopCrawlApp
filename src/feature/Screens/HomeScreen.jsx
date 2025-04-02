@@ -1,3 +1,6 @@
+
+
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   View, 
@@ -28,6 +31,26 @@ const categories = [
   { id: 2, name: 'Top-rated jogging strollers', color: '#FFA082' },
   { id: 3, name: 'Best moisturizers for dry skin', color: '#87E1E1' },
   { id: 4, name: 'Women\'s hiking boots', color: '#FFB6B6' },
+];
+
+// API configurations
+const AMAZON_API_CONFIG = {
+  baseURL: 'https://real-time-amazon-data.p.rapidapi.com',
+  headers: {
+    'x-rapidapi-host': 'real-time-amazon-data.p.rapidapi.com',
+    'x-rapidapi-key': 'fa261c00d5msh6541b9a512b5ab6p164a0bjsnf5e94495e08d'
+  }
+};
+
+// SERP API key
+const SERP_API_KEY = '7adf35f97c008c6ddce7921ee949027b7b8b34fd4fa969bd54d613a413093dc1';
+
+// Default product ASINs to fetch if no search is performed
+const DEFAULT_PRODUCT_ASINS = [
+  'B07ZPKBL9V', // Example ASIN
+  'B08RCJCGDJ',
+  'B08PF1Y7Q5',
+  'B07VKG1LFZ'
 ];
 
 // Search category component
@@ -104,24 +127,24 @@ const DealCard = ({ item, onSave }) => (
     </TouchableOpacity>
     
     <Card.Cover 
-      source={typeof item.image === 'string' ? { uri: item.image } : item.image} 
+      source={{ uri: item.image }} 
       style={styles.dealImage} 
     />
     
     <Card.Content style={styles.dealContent}>
       <Text style={styles.dealName}>{item.name}</Text>
       <Text style={styles.dealDescription} numberOfLines={2}>
-        {item.description}
+        {item.description || 'No description available'}
       </Text>
       
       {/* Recommendations */}
-      {item.recommendations && (
+      {item.recommendations && item.recommendations.length > 0 && (
         <View style={styles.recommendRow}>
           <Text style={styles.recommendText}>RECOMMENDED BY:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.recommendBadges}>
-              {item.recommendations.map((rec) => (
-                <RecommendBadge key={rec.id} icon={rec.icon} />
+              {item.recommendations.map((rec, index) => (
+                <RecommendBadge key={index} icon={rec.icon} />
               ))}
               {item.recommendations.length > 4 && (
                 <View style={styles.moreBadge}>
@@ -137,26 +160,24 @@ const DealCard = ({ item, onSave }) => (
       <View style={styles.priceRow}>
         <View style={styles.storeContainer}>
           <Image 
-            source={typeof item.storeIcon === 'string' 
-              ? { uri: item.storeIcon } 
-              : require('../../../assets/amazon.jpg')} 
+            source={require('../../../assets/amazon.jpg')} 
             style={styles.storeIcon} 
             resizeMode="contain" 
           />
-          <Text style={styles.storeName}>{item.store}</Text>
+          <Text style={styles.storeName}>{item.store || 'Amazon'}</Text>
         </View>
         <View style={styles.priceContainer}>
           {item.originalPrice && (
             <Text style={styles.originalPrice}>{item.originalPrice}</Text>
           )}
-          <Text style={styles.discountedPrice}>{item.discountedPrice || item.price}</Text>
+          <Text style={styles.discountedPrice}>{item.price}</Text>
         </View>
       </View>
     </Card.Content>
     
     {/* Category footer */}
     <TouchableOpacity style={styles.categoryContainer}>
-      <Text style={styles.categoryText}>{item.category}</Text>
+      <Text style={styles.categoryText}>{typeof item.category === 'object' ? item.category.name : (item.category || 'Amazon Product')}</Text>
       <Icon name="arrow-right" type="feather" size={18} color="#000" />
     </TouchableOpacity>
   </Card>
@@ -174,8 +195,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
   
   const handleSearchSubmit = () => {
     if (searchQuery.trim() !== "") {
-      navigation.navigate("Search", { query: searchQuery });
-      setSearchQuery(""); // Clear input after search
+      handleSearch();
     }
   };
   
@@ -220,95 +240,186 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }, [])
   );
   
+  // Function to search products using SERP API
+  const searchSerpApi = async (query) => {
+    try {
+      console.log(`Searching for "${query}" using SERP API`);
+      
+      const response = await axios.get('https://serpapi.com/search.json', {
+        params: {
+          q: query,
+          api_key: SERP_API_KEY,
+          engine: 'google_shopping',
+          gl: 'us', // Use 'us' for better results
+          hl: 'en',
+        },
+      });
+      
+      console.log('SERP API response received');
+      
+      // Check if we have shopping results
+      if (response.data && response.data.shopping_results && Array.isArray(response.data.shopping_results)) {
+        const results = response.data.shopping_results.map((item, index) => {
+          return {
+            id: `serp-${index}-${Date.now()}`,
+            name: item.title || 'Unknown Product',
+            description: item.snippet || '',
+            price: item.price || '$0',
+            originalPrice: '',
+            image: item.thumbnail || 'https://via.placeholder.com/300',
+            store: item.source || 'Google Shopping',
+            category: query,
+            recommendations: [
+              { id: '1', icon: require('../../../assets/amazon.jpg') }
+            ]
+          };
+        });
+        
+        console.log(`Found ${results.length} results from SERP API`);
+        return results;
+      } else {
+        console.log('No shopping results found in SERP API response');
+        return [];
+      }
+    } catch (error) {
+      console.error('SERP API search error:', error);
+      return [];
+    }
+  };
+  
+  // Function to search Amazon API
+  const searchAmazonProducts = async (query) => {
+    try {
+      console.log(`Searching for "${query}" using Amazon API`);
+      
+      const response = await axios.get(`${AMAZON_API_CONFIG.baseURL}/search`, {
+        headers: AMAZON_API_CONFIG.headers,
+        params: {
+          query: query,
+          country: 'US',
+          page: '1'
+        }
+      });
+      
+      if (response.data && response.data.data && response.data.data.products) {
+        const results = response.data.data.products.slice(0, 5).map(product => ({
+          id: product.asin,
+          name: product.title || 'Unknown Product',
+          description: product.description || '',
+          originalPrice: product.original_price || '',
+          price: product.price_string || product.original_price || '$0',
+          discount: product.is_on_sale ? `${product.discount_percentage || ''}% off!` : null,
+          image: product.image_url || (product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/300'),
+          store: 'Amazon',
+          category: typeof product.category === 'object' ? product.category.name : (product.category || query),
+          recommendations: [
+            { id: '1', icon: require('../../../assets/amazon.jpg') }
+          ]
+        }));
+        
+        console.log(`Found ${results.length} results from Amazon API`);
+        return results;
+      }
+      
+      console.log('No products found in Amazon API response');
+      return [];
+    } catch (error) {
+      console.error('Amazon API search error:', error);
+      return [];
+    }
+  };
+  
+  // Combined search function
+  const searchProducts = async (query) => {
+    setError(null);
+    
+    // First try SERP API
+    let results = await searchSerpApi(query);
+    
+    // If SERP failed, try Amazon
+    if (results.length === 0) {
+      console.log('No SERP results, trying Amazon API');
+      results = await searchAmazonProducts(query);
+    }
+    
+    if (results.length === 0) {
+      setError(`No results found for "${query}"`);
+    }
+    
+    return results;
+  };
+  
   // Fetch deals from API
   const fetchDeals = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // In a real app, this would be an API call to your backend or directly to a product API
-      // Example API call using axios:
-      // const response = await axios.get('https://your-api.com/api/deals');
-      // setDeals(response.data);
+      // Fetch multiple product details in parallel
+      const productPromises = DEFAULT_PRODUCT_ASINS.map(asin => fetchProductDetails(asin));
+      const productsData = await Promise.all(productPromises);
       
-      // For now, we'll use the sample data but structure it for future API integration
-      const sampleDeals = [
-        {
-          id: 1,
-          name: 'Shark Navigator Lift-Away ADV',
-          description: 'This vacuum delivers excellent all-around performance, especially with embedded debris on carpets, and features a self-cleaning brushroll.',
-          originalPrice: '$220',
-          discountedPrice: '$150',
-          discount: '32% off!',
-          image: require('../../../assets/amazon.jpg'), // Using existing image paths
-          store: 'Amazon',
-          storeIcon: require('../../../assets/amazon.jpg'),
-          recommendations: [
-            { id: '1', icon: require('../../../assets/amazon.jpg') },
-            { id: '2', icon: require('../../../assets/ebay.jpg') },
-            { id: '3', icon: require('../../../assets/shopify.jpg') },
-            { id: '4', icon: require('../../../assets/alibaba.jpg') },
-            { id: '5', icon: require('../../../assets/amazon.jpg') },
-          ],
-          category: 'Best vacuum cleaner'
-        },
-        {
-          id: 2,
-          name: 'Presto Professional Electric Knife Sharpener',
-          description: 'This adjustable electric sharpener works with all kinds of blades of different materials and features a serrated blade sharpening slot.',
-          originalPrice: '$175',
-          discountedPrice: '$150',
-          discount: '14% off!',
-          image: require('../../../assets/ebay.jpg'),
-          store: 'Amazon',
-          storeIcon: require('../../../assets/amazon.jpg'),
-          recommendations: [
-            { id: '1', icon: require('../../../assets/amazon.jpg') },
-            { id: '2', icon: require('../../../assets/ebay.jpg') },
-          ],
-          category: 'Best electric knife sharpener'
-        },
-        {
-          id: 3,
-          name: 'Wireless Bluetooth Earbuds',
-          description: 'Premium sound quality with active noise cancellation and 36-hour battery life with charging case.',
-          originalPrice: '$199',
-          discountedPrice: '$129',
-          discount: '35% off!',
-          image: require('../../../assets/shopify.jpg'),
-          store: 'Shopify',
-          storeIcon: require('../../../assets/shopify.jpg'),
-          recommendations: [
-            { id: '1', icon: require('../../../assets/amazon.jpg') },
-            { id: '2', icon: require('../../../assets/ebay.jpg') },
-            { id: '3', icon: require('../../../assets/shopify.jpg') },
-          ],
-          category: 'Best wireless earbuds'
-        },
-        {
-          id: 4,
-          name: 'Smart Home Security Camera',
-          description: '1080p HD indoor/outdoor camera with night vision, 2-way audio and motion detection alerts.',
-          originalPrice: '$120',
-          discountedPrice: '$79',
-          discount: '25% off!',
-          image: require('../../../assets/alibaba.jpg'),
-          store: 'Alibaba',
-          storeIcon: require('../../../assets/alibaba.jpg'),
-          recommendations: [
-            { id: '1', icon: require('../../../assets/amazon.jpg') },
-            { id: '4', icon: require('../../../assets/alibaba.jpg') },
-          ],
-          category: 'Best security cameras'
-        }
-      ];
+      // Filter out any null results
+      const validProducts = productsData.filter(product => product !== null);
       
-      setDeals(sampleDeals);
-      setLoading(false);
+      if (validProducts.length === 0) {
+        throw new Error('No products found');
+      }
+      
+      setDeals(validProducts);
     } catch (err) {
       console.error('Error fetching deals:', err);
       setError('Failed to load deals');
+    } finally {
       setLoading(false);
+    }
+  };
+  
+  // Function to fetch product details from Amazon API
+  const fetchProductDetails = async (asin) => {
+    try {
+      const response = await axios.get(`${AMAZON_API_CONFIG.baseURL}/product-details`, {
+        headers: AMAZON_API_CONFIG.headers,
+        params: {
+          asin: asin,
+          country: 'US'
+        }
+      });
+      
+      if (response.data && response.data.data) {
+        const productData = response.data.data;
+        
+        // Format product data for our app
+        return {
+          id: asin,
+          name: productData.title || 'Unknown Product',
+          description: productData.description || '',
+          originalPrice: productData.original_price || '',
+          price: productData.price_string || productData.original_price || '$0',
+          discount: productData.is_on_sale ? `${productData.discount_percentage || ''}% off!` : null,
+          image: productData.images && productData.images.length > 0 ? productData.images[0] : 'https://via.placeholder.com/300',
+          store: 'Amazon',
+          category: typeof productData.category === 'object' ? productData.category.name : (productData.category || 'Amazon Product'),
+          recommendations: [
+            { id: '1', icon: require('../../../assets/amazon.jpg') }
+          ]
+        };
+      }
+      
+      throw new Error('Invalid product data received');
+      
+    } catch (error) {
+      console.error(`Error fetching product details for ASIN ${asin}:`, error);
+      // Return a fallback product
+      return {
+        id: asin,
+        name: 'Product Information Unavailable',
+        description: 'Could not retrieve product details at this time.',
+        price: 'N/A',
+        image: 'https://via.placeholder.com/300',
+        store: 'Amazon',
+        category: 'Unknown'
+      };
     }
   };
   
@@ -341,16 +452,36 @@ const HomeScreen = ({ navigation, route = {} }) => {
   };
   
   // Handle search submission
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (searchQuery.trim()) {
       // Save search query to history via API
       saveSearchToHistory(searchQuery);
       
-      // Navigate to search results screen
-      navigation.navigate('SearchResults', { query: searchQuery });
+      // Show loading state
+      setLoading(true);
       
-      // Clear the search input
-      setSearchQuery('');
+      try {
+        // Search for products
+        const results = await searchProducts(searchQuery);
+        
+        // Update deals to show search results immediately
+        if (results.length > 0) {
+          setDeals(results);
+        }
+        
+        // Also navigate to search results
+        navigation.navigate('SearchResults', { 
+          query: searchQuery,
+          results: results
+        });
+      } catch (error) {
+        console.error('Search error:', error);
+        setError('Something went wrong with your search. Please try again.');
+      } finally {
+        setLoading(false);
+        // Clear the search input
+        setSearchQuery('');
+      }
     }
   };
   
@@ -377,9 +508,32 @@ const HomeScreen = ({ navigation, route = {} }) => {
   };
   
   // Handle category selection
-  const handleCategorySelect = (categoryName) => {
+  const handleCategorySelect = async (categoryName) => {
     saveSearchToHistory(categoryName);
-    navigation.navigate('SearchResults', { query: categoryName });
+    
+    // Show loading state
+    setLoading(true);
+    
+    try {
+      // Search for products
+      const results = await searchProducts(categoryName);
+      
+      // Update deals to show category results
+      if (results.length > 0) {
+        setDeals(results);
+      }
+      
+      // Navigate to search results
+      navigation.navigate('SearchResults', { 
+        query: categoryName,
+        results: results
+      });
+    } catch (error) {
+      console.error('Category search error:', error);
+      setError('Something went wrong with your search. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   // Calculate header animations

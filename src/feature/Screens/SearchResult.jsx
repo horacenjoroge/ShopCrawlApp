@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
     position: 'relative',
   },
-  productImage: {
+  modalImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
@@ -485,12 +485,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 4,
   },
-  ratingRow: {
+  modalRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
   },
-  reviewCount: {
+  modalReviewCount: {
     color: '#999',
     fontSize: 13,
     marginLeft: 4,
@@ -607,6 +607,18 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: 'bold',
     fontSize: 14,
+    marginLeft: 8,
+  },
+  viewOnStoreButton: {
+    backgroundColor: '#FFC107',
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  viewOnStoreText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
