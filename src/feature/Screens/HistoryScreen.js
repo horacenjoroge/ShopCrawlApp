@@ -163,7 +163,7 @@ const HistoryScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFC107" />
+        <ActivityIndicator size="large" color="#6366F1" />
         <Text style={styles.loadingText}>Loading history...</Text>
       </View>
     );
@@ -190,7 +190,7 @@ const HistoryScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Search History</Text>
         {hasHistory && (
@@ -250,7 +250,7 @@ const HistoryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f5f7fa', // Changed from dark to light background
   },
   header: {
     flexDirection: 'row',
@@ -259,22 +259,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
+    backgroundColor: '#6366F1', // Changed to purple/indigo like home screen
   },
   headerTitle: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#ffffff', // Kept white for contrast on purple
   },
   clearAllButton: {
     padding: 8,
   },
   clearAllText: {
     fontSize: 16,
-    color: '#FFC107',
+    color: '#ffffff', // Changed to white for contrast on purple
     fontWeight: '500',
   },
   scrollContainer: {
     flex: 1,
+    backgroundColor: '#f5f7fa', // Light background
   },
   sectionContainer: {
     marginBottom: 20,
@@ -282,7 +284,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#888',
+    color: '#666666', // Darker for contrast on light background
     marginVertical: 10,
     paddingHorizontal: 20,
   },
@@ -292,10 +294,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     paddingHorizontal: 20,
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#ffffff', // Changed to white
     marginVertical: 5,
     marginHorizontal: 15,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   historyItemContent: {
     flex: 1,
@@ -306,7 +313,7 @@ const styles = StyleSheet.create({
   historyItemText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#ffffff',
+    color: '#333333', // Changed to dark text
     flex: 1,
   },
   deleteButton: {
@@ -315,7 +322,7 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontSize: 24,
-    color: '#888',
+    color: '#666666', // Darker for contrast
     fontWeight: 'bold',
   },
   historyItemImage: {
@@ -328,33 +335,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f5f7fa', // Light background
   },
   loadingText: {
-    color: '#ffffff',
+    color: '#333333', // Dark text
     marginTop: 10,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f5f7fa', // Light background
     padding: 20,
   },
   errorText: {
-    color: '#ff6b6b',
+    color: '#ff6b6b', // Kept error color
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#FFC107',
+    backgroundColor: '#6366F1', // Changed to purple
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 25,
   },
   retryButtonText: {
-    color: '#000',
+    color: '#ffffff', // White text on purple
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -363,16 +370,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#f5f7fa', // Light background
   },
   noHistoryText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#333333', // Dark text
     marginBottom: 10,
   },
   noHistorySubtext: {
     fontSize: 16,
-    color: '#888',
+    color: '#666666', // Darker for contrast
     textAlign: 'center',
   }
 });

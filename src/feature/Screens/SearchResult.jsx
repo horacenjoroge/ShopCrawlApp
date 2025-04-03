@@ -570,7 +570,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
             name={isProductSaved(item.id) ? "bookmark" : "bookmark-outline"} 
             type="material-community" 
             size={24} 
-            color="#FFC107" 
+            color={isProductSaved(item.id) ? "#F59E0B" : "#FFF"} 
           />
         </TouchableOpacity>
         
@@ -603,7 +603,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
           onSubmitEditing={handleSearch}
         />
         <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Icon name="search" size={24} color="#FFC107" />
+          <Icon name="search" size={24} color="#6366F1" />
         </TouchableOpacity>
       </View>
       
@@ -638,7 +638,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
       {/* Loading indicator or Products */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFC107" />
+          <ActivityIndicator size="large" color="#6366F1" />
           <Text style={styles.loadingText}>Searching stores...</Text>
         </View>
       ) : (
@@ -667,7 +667,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
               style={styles.closeModalButton}
               onPress={() => setModalVisible(false)}
             >
-              <Icon name="close" size={24} color="#fff" />
+              <Icon name="close" size={24} color="#333" />
             </TouchableOpacity>
             
             {/* Product details */}
@@ -689,7 +689,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
                       name={isProductSaved(selectedProduct.id) ? "bookmark" : "bookmark-outline"}
                       type="material-community"
                       size={28}
-                      color="#FFC107"
+                      color={isProductSaved(selectedProduct.id) ? "#F59E0B" : "#6366F1"}
                     />
                   </TouchableOpacity>
                   
@@ -735,7 +735,7 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
             ) : (
               // Fallback content if no product is selected
               <View style={styles.modalFallbackContainer}>
-                <ActivityIndicator size="large" color="#FFC107" />
+                <ActivityIndicator size="large" color="#6366F1" />
                 <Text style={styles.modalFallbackText}>Loading product details...</Text>
               </View>
             )}
@@ -749,20 +749,25 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
+    backgroundColor: '#f5f7fa', // Changed from dark to light background
   },
   searchContainer: {
     flexDirection: 'row',
     margin: 16,
     marginBottom: 8,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#ffffff', // Changed to white
     borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     height: 50,
     paddingHorizontal: 16,
-    color: 'white',
+    color: '#333333', // Changed to dark text
     fontSize: 16,
   },
   searchButton: {
@@ -772,7 +777,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   featuredBanner: {
-    backgroundColor: '#FFC107',
+    backgroundColor: '#6366F1', // Changed to match home screen purple
     margin: 16,
     marginTop: 4,
     marginBottom: 12,
@@ -783,12 +788,12 @@ const styles = StyleSheet.create({
   featuredText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#fff', // White text on purple
     marginBottom: 4,
   },
   featuredSubtext: {
     fontSize: 12,
-    color: '#333',
+    color: 'rgba(255, 255, 255, 0.8)', // Slightly transparent white
   },
   filtersContainer: {
     marginBottom: 8,
@@ -800,27 +805,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginHorizontal: 4,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#ffffff', // Changed to white
     borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   selectedStoreButton: {
-    backgroundColor: '#FFC107',
+    backgroundColor: '#6366F1', // Changed to purple
   },
   storeButtonText: {
-    color: 'white',
+    color: '#333333', // Changed to dark text
     fontSize: 14,
   },
   selectedStoreButtonText: {
-    color: '#000',
+    color: '#ffffff', // White text on purple button
   },
   sectionHeader: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#e1e1e1', // Lighter border
   },
   sectionTitle: {
-    color: 'white',
+    color: '#333333', // Changed to dark text
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -834,14 +844,19 @@ const styles = StyleSheet.create({
     width: 300,
     height: 380,
     marginRight: 16,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#ffffff', // Changed to white
     borderRadius: 12,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   productImage: {
     width: '100%',
     height: 180,
-    backgroundColor: '#444',
+    backgroundColor: '#f8f9fa', // Lighter background
   },
   productInfo: {
     padding: 16,
@@ -853,23 +868,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   storeName: {
-    color: '#FFC107',
+    color: '#6366F1', // Changed to purple
     fontSize: 14,
     fontWeight: 'bold',
   },
   priceText: {
-    color: 'white',
+    color: '#F59E0B', // Amber/gold for prices
     fontSize: 16,
     fontWeight: 'bold',
   },
   productTitle: {
-   color: 'white',
+   color: '#333333', // Changed to dark text
    fontSize: 16,
    fontWeight: 'bold',
    marginBottom: 8,
  },
  productSpecs: {
-   color: '#CCC',
+   color: '#666666', // Changed to medium gray
    fontSize: 14,
    marginBottom: 12,
    flex: 1,
@@ -883,7 +898,7 @@ const styles = StyleSheet.create({
    marginRight: 8,
  },
  reviewCount: {
-   color: '#999',
+   color: '#777777', // Changed to lighter gray
    fontSize: 14,
  },
  loadingContainer: {
@@ -893,7 +908,7 @@ const styles = StyleSheet.create({
    height: 400
  },
  loadingText: {
-   color: '#FFC107',
+   color: '#6366F1', // Changed to purple
    marginTop: 10,
    fontSize: 16
  },
@@ -901,13 +916,18 @@ const styles = StyleSheet.create({
    position: 'absolute',
    right: 15,
    top: 15,
-   backgroundColor: 'rgba(0,0,0,0.7)', // Darker background for better visibility
+   backgroundColor: 'rgba(255,255,255,0.8)', // Changed to white with transparency
    borderRadius: 20,
    width: 40,
    height: 40,
    justifyContent: 'center',
    alignItems: 'center',
    zIndex: 10, // Ensure it's on top
+   shadowColor: '#000',
+   shadowOffset: { width: 0, height: 2 },
+   shadowOpacity: 0.1,
+   shadowRadius: 3,
+   elevation: 2,
  },
  modalScrollView: {
    width: '100%',
@@ -916,26 +936,36 @@ const styles = StyleSheet.create({
    flex: 1,
    justifyContent: 'center',
    alignItems: 'center',
-   backgroundColor: 'rgba(0,0,0,0.9)',
+   backgroundColor: 'rgba(0,0,0,0.5)', // Slightly more transparent
  },
  modalContent: {
    width: '90%',
    maxHeight: '90%',
-   backgroundColor: '#2A2A2A',
+   backgroundColor: '#ffffff', // Changed to white
    borderRadius: 12,
    overflow: 'hidden',
+   shadowColor: '#000',
+   shadowOffset: { width: 0, height: 5 },
+   shadowOpacity: 0.2,
+   shadowRadius: 10,
+   elevation: 8,
  },
  closeModalButton: {
    position: 'absolute',
    right: 15,
    top: 15,
-   backgroundColor: 'rgba(0,0,0,0.5)',
+   backgroundColor: 'rgba(255,255,255,0.9)', // Changed to white
    borderRadius: 20,
    width: 40,
    height: 40,
    justifyContent: 'center',
    alignItems: 'center',
    zIndex: 2,
+   shadowColor: '#000',
+   shadowOffset: { width: 0, height: 2 },
+   shadowOpacity: 0.1,
+   shadowRadius: 3,
+   elevation: 3,
  },
  modalProductContainer: {
    width: '100%',
@@ -943,25 +973,30 @@ const styles = StyleSheet.create({
  modalProductImage: {
    width: '100%',
    height: 250,
-   backgroundColor: '#444',
+   backgroundColor: '#f8f9fa', // Lighter background
  },
  modalBookmarkButton: {
    position: 'absolute',
    right: 20,
    top: 20,
-   backgroundColor: 'rgba(0,0,0,0.7)', // Improved visibility
+   backgroundColor: 'rgba(255,255,255,0.9)', // Changed to white
    borderRadius: 25,
    width: 50,
    height: 50,
    justifyContent: 'center',
    alignItems: 'center',
    zIndex: 10,
+   shadowColor: '#000',
+   shadowOffset: { width: 0, height: 2 },
+   shadowOpacity: 0.1,
+   shadowRadius: 3,
+   elevation: 3,
  },
  modalProductDetails: {
    padding: 20,
  },
  modalProductTitle: {
-   color: 'white',
+   color: '#333333', // Changed to dark text
    fontSize: 20,
    fontWeight: 'bold',
    marginBottom: 10,
@@ -973,20 +1008,20 @@ const styles = StyleSheet.create({
    marginBottom: 15,
  },
  modalStoreName: {
-   color: '#FFC107',
+   color: '#6366F1', // Changed to purple
    fontSize: 16,
    fontWeight: 'bold',
  },
  modalProductPrice: {
-   color: 'white',
+   color: '#F59E0B', // Amber for prices
    fontSize: 20,
    fontWeight: 'bold',
  },
  modalProductSpecs: {
-   color: '#CCC',
+   color: '#666666', // Changed to medium gray
    fontSize: 16,
    marginBottom: 15,
-   lineHeight:  22,
+   lineHeight: 22,
  },
  modalRatingRow: {
    flexDirection: 'row',
@@ -994,30 +1029,30 @@ const styles = StyleSheet.create({
    marginBottom: 20,
  },
  modalReviewCount: {
-   color: '#999',
+   color: '#777777', // Changed to lighter gray
    fontSize: 14,
    marginLeft: 8,
  },
  saveProductButton: {
-   backgroundColor: '#444',
+   backgroundColor: '#f1f2f6', // Light gray
    paddingVertical: 12,
    borderRadius: 25,
    alignItems: 'center',
    marginBottom: 10,
  },
  saveProductText: {
-   color: '#FFC107',
+   color: '#6366F1', // Changed to purple
    fontSize: 16,
    fontWeight: 'bold',
  },
  viewOnStoreButton: {
-   backgroundColor: '#FFC107',
+   backgroundColor: '#6366F1', // Changed to purple
    paddingVertical: 12,
    borderRadius: 25,
    alignItems: 'center',
  },
  viewOnStoreText: {
-   color: '#000',
+   color: '#ffffff', // White text on purple
    fontSize: 16,
    fontWeight: 'bold',
  },
@@ -1028,7 +1063,7 @@ const styles = StyleSheet.create({
  },
  modalFallbackText: {
    fontSize: 16,
-   color: '#ccc',
+   color: '#666666', // Changed to medium gray
    marginTop: 15,
    textAlign: 'center',
  },

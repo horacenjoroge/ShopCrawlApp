@@ -39,7 +39,7 @@ const LoadingSpinner = ({ visible }) => {
   return (
     <View style={styles.spinnerOverlay}>
       <View style={styles.spinnerContainer}>
-        <ActivityIndicator size="large" color="#FFC107" />
+        <ActivityIndicator size="large" color="#6366F1" />
         <Text style={styles.spinnerText}>Searching...</Text>
       </View>
     </View>
@@ -67,13 +67,20 @@ const SearchResultsWithLoading = ({ route, navigation }) => {
   const handleBack = () => {
     navigation.goBack();
   };
+
+  // Show bottom tabs on this screen
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      tabBarVisible: true
+    });
+  }, [navigation]);
   
   return (
-    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
+    <View style={{ flex: 1, backgroundColor: '#f5f7fa' }}>
       {/* Header with back button */}
       <View style={styles.searchHeader}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="white" />
+          <Icon name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Search Results</Text>
       </View>
@@ -119,6 +126,7 @@ const HomeWithProfile = ({ navigation }) => {
   }, []);
   
   const handleSearch = (query) => {
+    // Navigate to search results within the Main tab navigator to keep bottom tabs
     navigation.navigate('SearchResults', { query });
   };
   
@@ -139,9 +147,8 @@ const HomeWithProfile = ({ navigation }) => {
   );
 };
 
-// Profile Screen - Updated to use AsyncStorage
-const ProfileScreen = () => {
-  const [profileMenuVisible, setProfileMenuVisible] = useState(true);
+// Profile Screen - Updated to fix visibility issues
+const ProfileScreen = ({ navigation }) => {
   const [userData, setUserData] = useState({
     name: '',
     email: ''
@@ -168,31 +175,38 @@ const ProfileScreen = () => {
     
     getUserData();
   }, []);
+
+  // Handle back button or close
+  const handleClose = () => {
+    // Navigate to Home tab instead of just closing the menu
+    navigation.navigate('HomeTab');
+  };
   
   return (
-    <View style={{ flex: 1, backgroundColor: '#1a1a1a' }}>
+    <View style={{ flex: 1, backgroundColor: '#f5f7fa' }}>
+      {/* Always show the menu when on profile tab */}
       <ProfileMenuOverlay 
-        visible={profileMenuVisible} 
-        onClose={() => setProfileMenuVisible(false)}
+        visible={true} 
+        onClose={handleClose}
         userData={userData}
       />
     </View>
   );
 };
 
-// Bottom tab navigator component
-function MainTabs() {
+// This function creates the main tab navigator with SearchResults included
+function createMainTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#FFC107',
+        tabBarActiveTintColor: '#6366F1',
         tabBarInactiveTintColor: '#888',
         tabBarStyle: {
-          backgroundColor: '#1a1a1a',
-          borderTopColor: '#333',
+          backgroundColor: '#ffffff',
+          borderTopColor: '#e1e1e1',
         },
         headerStyle: {
-          backgroundColor: '#1a1a1a',
+          backgroundColor: '#6366F1',
         },
         headerTintColor: 'white'
       }}
@@ -228,7 +242,8 @@ function MainTabs() {
           tabBarIcon: ({ color, size }) => (
             <Icon name="history" color={color} size={size} />
           ),
-          title: 'Search History'
+          title: 'Search History',
+          headerShown: false
         }}
       />
       <Tab.Screen 
@@ -241,6 +256,15 @@ function MainTabs() {
           ),
           title: 'Profile',
           headerShown: false
+        }}
+      />
+      {/* Add SearchResults as a hidden tab to maintain navigation */}
+      <Tab.Screen 
+        name="SearchResults" 
+        component={SearchResultsWithLoading} 
+        options={{
+          tabBarButton: () => null, // Hide this tab from the tab bar
+          headerShown: false,
         }}
       />
     </Tab.Navigator>
@@ -294,15 +318,9 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Home" component={HomeScreenWrapper} options={{ headerShown: false }} />
-          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen name="Main" component={createMainTabNavigator} options={{ headerShown: false }} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
-          <Stack.Screen 
-            name="SearchResults" 
-            component={SearchResultsWithLoading} 
-            options={{
-              headerShown: false, // Hide the default header since we're using our own
-            }}
-          />
+          {/* Remove SearchResults from here since it's now in the tab navigator */}
         </Stack.Navigator>
       </SafeAreaView>
     </NavigationContainer>
@@ -322,26 +340,31 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   spinnerContainer: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#ffffff',
     padding: 24,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   spinnerText: {
-    color: 'white',
+    color: '#333333',
     marginTop: 12,
     fontSize: 16,
   },
   searchHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#6366F1',
     paddingTop: Platform.OS === 'ios' ? 50 : 15,
     paddingBottom: 15,
     paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#e1e1e1',
   },
   backButton: {
     padding: 5,
@@ -349,7 +372,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#ffffff',
     marginLeft: 15,
   },
 });

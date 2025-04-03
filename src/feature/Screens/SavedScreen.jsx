@@ -352,7 +352,7 @@ const SavedProductsScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFC107" />
+        <ActivityIndicator size="large" color="#6366F1" />
         <Text style={styles.loadingText}>Loading saved products...</Text>
       </View>
     );
@@ -377,7 +377,7 @@ const SavedProductsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Saved Products</Text>
         {(hasApiSavedProducts || (showLocalFallback && hasLocalSavedProducts)) && (
@@ -498,7 +498,7 @@ const SavedProductsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f5f7fa', // Changed from dark to light background like home screen
   },
   header: {
     flexDirection: 'row',
@@ -507,37 +507,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
+    backgroundColor: '#6366F1', // Changed to purple/indigo like home screen
   },
   headerTitle: {
     fontSize: 40,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#ffffff', // Kept white text on purple background
   },
   clearAllButton: {
     padding: 8,
   },
   clearAllText: {
     fontSize: 16,
-    color: '#FFC107',
+    color: '#ffffff', // Changed to white to match against purple header
     fontWeight: '500',
   },
   scrollContainer: {
     flex: 1,
+    backgroundColor: '#f5f7fa', // Changed to match light background
   },
   productsGrid: {
     padding: 15,
   },
   productItem: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: '#ffffff', // Changed from dark to white card background
     borderRadius: 12,
     marginBottom: 15,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   productImage: {
     width: '100%',
     height: 200,
     resizeMode: 'cover',
-    backgroundColor: '#333',
+    backgroundColor: '#f8f9fa', // Lightened
   },
   productContent: {
     padding: 15,
@@ -545,7 +552,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#ffffff',
+    color: '#333333', // Changed to dark text on light background
     marginBottom: 10,
   },
   productDetails: {
@@ -558,55 +565,55 @@ const styles = StyleSheet.create({
   },
   storeText: {
     fontSize: 14,
-    color: '#FFC107',
+    color: '#6366F1', // Changed to match theme color
     marginBottom: 4,
   },
   priceText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#F59E0B', // Kept price color
   },
   removeButton: {
-    backgroundColor: '#444',
+    backgroundColor: '#f2f3f5', // Lightened button background
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
   },
   removeButtonText: {
-    color: '#ff6b6b',
+    color: '#ff6b6b', // Kept the red text for remove
     fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f5f7fa', // Changed to light background
   },
   loadingText: {
-    color: '#ffffff',
+    color: '#333333', // Changed to dark text
     marginTop: 10,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#f5f7fa', // Changed to light background
     padding: 20,
   },
   errorText: {
-    color: '#ff6b6b',
+    color: '#ff6b6b', // Kept error color
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#FFC107',
+    backgroundColor: '#6366F1', // Changed to primary color
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 25,
   },
   retryButtonText: {
-    color: '#000',
+    color: '#fff', // White text on purple button
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -615,31 +622,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#f5f7fa', // Changed to light background
   },
   noProductsText: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#333333', // Changed to dark text
     marginBottom: 10,
   },
   noProductsSubtext: {
     fontSize: 16,
-    color: '#888',
+    color: '#666666', // Made slightly darker for contrast
     textAlign: 'center',
     marginBottom: 30,
   },
   debugButton: {
-    backgroundColor: '#333',
+    backgroundColor: '#e1e3f5', // Lightened, with purple tint
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
   },
   debugButtonText: {
-    color: '#FFC107',
+    color: '#6366F1', // Changed to primary color
     fontSize: 14,
   },
   fallbackBanner: {
-    backgroundColor: '#333',
+    backgroundColor: '#e1e3f5', // Lightened, with purple tint
     paddingVertical: 10,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -647,17 +655,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fallbackText: {
-    color: '#FFC107',
+    color: '#6366F1', // Changed to primary color
     fontSize: 14,
   },
   syncButton: {
-    backgroundColor: '#FFC107',
+    backgroundColor: '#6366F1', // Changed to primary color
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 15,
   },
   syncButtonText: {
-    color: '#000',
+    color: '#fff', // White text
     fontSize: 12,
     fontWeight: 'bold',
   }

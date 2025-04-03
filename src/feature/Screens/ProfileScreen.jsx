@@ -11,12 +11,15 @@ import {
 
 const ProfileMenuOverlay = ({ visible, onClose, userData }) => {
   // Theme options
-  const [theme, setTheme] = useState('dark'); // 'auto', 'light', or 'dark'
+  const [theme, setTheme] = useState('light'); // Changed default to light
   
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
     // In a real app, you would apply the theme change throughout the app
   };
+
+  // If not visible, don't render anything
+  if (!visible) return null;
 
   return (
     <Modal
@@ -120,29 +123,30 @@ const styles = StyleSheet.create({
     width: '90%',
     alignSelf: 'center',
     marginTop: 80,
-    backgroundColor: '#2A2A2A',
+    backgroundColor: '#ffffff', // Changed to white
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 10,
   },
   userInfoSection: {
     padding: 16,
     paddingBottom: 20,
+    backgroundColor: '#6366F1', // Changed to purple like home screen
   },
   userName: {
-    color: 'white',
+    color: 'white', // Kept white for contrast on purple
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   userEmail: {
-    color: 'white',
+    color: 'white', // Kept white for contrast on purple
     fontSize: 16,
-    opacity: 0.8,
+    opacity: 0.9,
   },
   themeSelectionContainer: {
     flexDirection: 'row',
@@ -152,7 +156,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#3D3D3D',
+    borderColor: '#e1e1e1', // Lighter border
   },
   themeOption: {
     flex: 1,
@@ -164,14 +168,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   selectedTheme: {
-    backgroundColor: '#444444',
+    backgroundColor: '#e1e3f5', // Light purple background
   },
   themeIcon: {
     marginRight: 8,
     fontSize: 16,
   },
   optionText: {
-    color: 'white',
+    color: '#333333', // Dark text
     fontSize: 15,
   },
   menuItem: {
@@ -186,70 +190,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   menuText: {
-    color: 'white',
+    color: '#333333', // Dark text
     fontSize: 16,
     flex: 1,
   },
   chevron: {
-    color: 'white',
+    color: '#666666', // Darker gray
     fontSize: 20,
     fontWeight: 'bold',
   },
   divider: {
     height: 1,
-    backgroundColor: '#3D3D3D',
+    backgroundColor: '#e1e1e1', // Lighter divider
   },
 });
-
-// Example of how to use the component in a parent screen
-const HomeScreen = () => {
-  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
-  
-  const userData = {
-    name: 'horace njoroge',
-    email: 'horacenjorge@gmail.com'
-  };
-  
-  return (
-    <SafeAreaView style={{ flex: 1 }}>
-      {/* Your regular screen content here */}
-      <View style={{ flex: 1 }}>
-        {/* Header with profile button */}
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'flex-end', 
-          padding: 16, 
-          backgroundColor: '#1A1A1A' 
-        }}>
-          <TouchableOpacity 
-            onPress={() => setProfileMenuVisible(true)}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#333',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 18 }}>👤</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Rest of your screen content */}
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: 'white' }}>Home Screen Content</Text>
-        </View>
-      </View>
-      
-      {/* Profile menu overlay */}
-      <ProfileMenuOverlay 
-        visible={profileMenuVisible}
-        onClose={() => setProfileMenuVisible(false)}
-        userData={userData}
-      />
-    </SafeAreaView>
-  );
-};
 
 export default ProfileMenuOverlay;
