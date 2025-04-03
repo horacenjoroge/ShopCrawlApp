@@ -41,7 +41,7 @@ const WelcomeScreen = ({ navigation }) => {
           <Text style={[styles.brand, { fontFamily: 'RobotoBold' }]}>ShopCrawl</Text>
         </Animated.View>
 
-        {/* Animated buttons */}
+        {/* Animated button */}
         <Animated.View style={[styles.buttonContainer, { transform: [{ scale: bounceAnim }] }]}>
           <Button
             mode="contained"

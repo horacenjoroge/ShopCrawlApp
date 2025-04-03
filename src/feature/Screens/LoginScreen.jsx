@@ -77,7 +77,7 @@ const LoginScreen = () => {
       const storedEmail = await AsyncStorage.getItem('userEmail');
       console.log('Stored Email:', storedEmail);
   
-      // Navigate to home with the email used for login
+      // Navigate to home with the email use for login
      navigation.replace('Main');
     } catch (err) {
       console.log('Login Error:', err.message);

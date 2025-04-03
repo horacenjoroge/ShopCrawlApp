@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 30,
     paddingVertical: 60,
-    backgroundColor: '#4F46E5', // Match background color
+    backgroundColor: '#4F46E5',
   },
   backButton: {
     position: 'absolute',
@@ -275,8 +275,8 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 10,
-    backgroundColor: '#FFF', // Dark blackish-purple input field
-    color: 'white', // White text inside input fields
+    backgroundColor: '#FFF',
+    color: 'white',
   },
   signInButton: {
     paddingVertical: 5,
