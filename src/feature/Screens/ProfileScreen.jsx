@@ -9,8 +9,7 @@ import {
   SafeAreaView,
   Image,
   Modal,
-  Dimensions,
-  Platform
+  Dimensions
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -20,17 +19,17 @@ import { authService } from '../../services/api';
 
 // Color Palette
 const COLOR_PALETTE = [
-  { name: 'Indigo', primary: '#6366F1', secondary: '#A5B4FC' },
-  { name: 'Blue', primary: '#3B82F6', secondary: '#93C5FD' },
-  { name: 'Green', primary: '#10B981', secondary: '#6EE7B7' },
-  { name: 'Red', primary: '#EF4444', secondary: '#FCA5A5' },
-  { name: 'Purple', primary: '#8B5CF6', secondary: '#C4B5FD' },
-  { name: 'Pink', primary: '#EC4899', secondary: '#F9A8D4' },
-  { name: 'Orange', primary: '#F97316', secondary: '#FDBA74' },
+  { name: 'Indigo', primary: '#6366F1' },
+  { name: 'Blue', primary: '#3B82F6' },
+  { name: 'Green', primary: '#10B981' },
+  { name: 'Red', primary: '#EF4444' },
+  { name: 'Purple', primary: '#8B5CF6' },
+  { name: 'Pink', primary: '#EC4899' },
+  { name: 'Orange', primary: '#F97316' },
 ];
 
 const ProfileScreen = ({ navigation }) => {
-  const { theme, setTheme, currentTheme } = useTheme();
+  const { theme, setTheme, currentTheme, setPrimaryColor } = useTheme();
   
   // User state
   const [userData, setUserData] = useState({
@@ -80,8 +79,7 @@ const ProfileScreen = ({ navigation }) => {
   const handleThemeChange = async (newTheme) => {
     try {
       // Save theme to AsyncStorage
-      await AsyncStorage.setItem('appTheme', newTheme);
-      setTheme(newTheme);
+      await setTheme(newTheme);
     } catch (error) {
       console.error('Error saving theme:', error);
     }
@@ -90,8 +88,10 @@ const ProfileScreen = ({ navigation }) => {
   // Color selection handler
   const handleColorSelection = async (color) => {
     try {
-      // Save selected color to AsyncStorage
-      await AsyncStorage.setItem('primaryColor', color.primary);
+      // Update primary color in theme context
+      await setPrimaryColor(color.primary);
+      
+      // Update local state
       setSelectedColor(color);
       setIsColorModalVisible(false);
     } catch (error) {
@@ -335,7 +335,7 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* Logout Button */}
         <TouchableOpacity 
-          style={[styles.logoutButton, { backgroundColor: currentTheme.primary }]}
+         style={[styles.logoutButton, { backgroundColor: currentTheme.primary }]}
           onPress={handleLogout}
         >
           <Icon name="logout" size={24} color="#ffffff" />
@@ -348,6 +348,7 @@ const ProfileScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

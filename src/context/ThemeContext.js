@@ -1,8 +1,8 @@
 import React, { 
-  createContext, 
-  useState, 
-  useContext, 
-  useEffect 
+  createContext,    
+  useState,    
+  useContext,    
+  useEffect  
 } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -34,36 +34,55 @@ const ThemeContext = createContext({
   theme: 'light',
   isDarkMode: false,
   setTheme: () => {},
+  setPrimaryColor: () => {},
   currentTheme: THEMES.light
 });
 
 // Theme Provider Component
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('light');
+  const [primaryColor, setPrimaryColor] = useState('#6366F1');
   const systemColorScheme = useColorScheme();
 
   // Determine current theme
   const getCurrentTheme = (selectedTheme) => {
+    let baseTheme;
+    
+    // Determine base theme
     if (selectedTheme === 'auto') {
-      return systemColorScheme || 'light';
+      baseTheme = systemColorScheme || 'light';
+    } else {
+      baseTheme = selectedTheme;
     }
-    return selectedTheme;
+
+    // Create theme with custom primary color
+    return {
+      ...THEMES[baseTheme],
+      primary: primaryColor
+    };
   };
 
-  // Effect to load saved theme
+  // Effect to load saved theme and primary color
   useEffect(() => {
-    const loadTheme = async () => {
+    const loadThemePreferences = async () => {
       try {
+        // Load theme
         const savedTheme = await AsyncStorage.getItem('appTheme');
         if (savedTheme) {
           setTheme(savedTheme);
         }
+
+        // Load primary color
+        const savedPrimaryColor = await AsyncStorage.getItem('primaryColor');
+        if (savedPrimaryColor) {
+          setPrimaryColor(savedPrimaryColor);
+        }
       } catch (error) {
-        console.error('Error loading theme:', error);
+        console.error('Error loading theme preferences:', error);
       }
     };
 
-    loadTheme();
+    loadThemePreferences();
   }, []);
 
   // Update theme handler
@@ -76,18 +95,32 @@ export const ThemeProvider = ({ children }) => {
     }
   };
 
+  // Update primary color handler
+  const updatePrimaryColor = async (color) => {
+    try {
+      await AsyncStorage.setItem('primaryColor', color);
+      setPrimaryColor(color);
+    } catch (error) {
+      console.error('Error saving primary color:', error);
+    }
+  };
+
   // Determine current theme colors and mode
   const currentThemeName = getCurrentTheme(theme);
-  const currentTheme = THEMES[currentThemeName];
+  const currentTheme = {
+    ...THEMES[currentThemeName],
+    primary: primaryColor
+  };
   const isDarkMode = currentThemeName === 'dark';
 
   return (
     <ThemeContext.Provider 
-      value={{ 
-        theme, 
-        isDarkMode, 
-        setTheme: updateTheme, 
-        currentTheme 
+      value={{
+        theme,
+        isDarkMode,
+        setTheme: updateTheme,
+        setPrimaryColor: updatePrimaryColor,
+        currentTheme
       }}
     >
       {children}
