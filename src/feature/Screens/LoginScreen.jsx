@@ -73,9 +73,12 @@ const LoginScreen = () => {
       await AsyncStorage.setItem('userToken', userData.token);
       await AsyncStorage.setItem('userId', userData.userId);
       await AsyncStorage.setItem('userEmail', email);
-
-      // Navigate to Main screen
-      navigation.replace('Main');
+  
+      const storedEmail = await AsyncStorage.getItem('userEmail');
+      console.log('Stored Email:', storedEmail);
+  
+      // Navigate to home with the email used for login
+     navigation.replace('Main');
     } catch (err) {
       console.log('Login Error:', err.message);
       setError(err.message || 'Failed to sign in');

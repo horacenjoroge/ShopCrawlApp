@@ -1,255 +1,325 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  Modal,
-  Pressable,
+  ScrollView,
+  Alert,
   SafeAreaView
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const ProfileMenuOverlay = ({ visible, onClose, userData }) => {
-  // Theme options
-  const [theme, setTheme] = useState('dark'); // 'auto', 'light', or 'dark'
-  
+const ProfileScreen = ({ navigation }) => {
+  // User state
+  const [userData, setUserData] = useState({
+    name: '',
+    email: '',
+    userId: null
+  });
+
+  // Theme state
+  const [theme, setTheme] = useState('light');
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const email = await AsyncStorage.getItem('userEmail');
+        const userId = await AsyncStorage.getItem('userId');
+        
+        if (email) {
+          const username = email.split('@')[0];
+          setUserData({
+            name: username,
+            email: email,
+            userId: userId
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Theme change handler
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
-    // In a real app, you would apply the theme change throughout the app
+    // TODO: Implement app-wide theme change logic
+  };
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      // Clear AsyncStorage
+      await AsyncStorage.removeItem('userEmail');
+      await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('userToken');
+
+      // Navigate to Welcome screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Welcome' }]
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Logout Failed', 'Unable to log out. Please try again.');
+    }
+  };
+
+  // Delete account handler
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // TODO: Call backend API to delete account
+              // For now, just clear local storage and navigate
+              await AsyncStorage.clear();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }]
+              });
+            } catch (error) {
+              console.error('Account deletion error:', error);
+              Alert.alert('Delete Failed', 'Unable to delete account. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Open external link handler (placeholder)
+  const openExternalLink = (type) => {
+    // TODO: Implement actual link opening
+    Alert.alert('Coming Soon', `${type} will be available soon.`);
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.modalBackground} onPress={onClose}>
-        {/* Stop propagation for the menu itself */}
-        <Pressable style={styles.menuContainer} onPress={(e) => e.stopPropagation()}>
-          
-          {/* User info section */}
-          <View style={styles.userInfoSection}>
-            <Text style={styles.userName}>{userData?.name || 'Guest User'}</Text>
-            <Text style={styles.userEmail}>{userData?.email || 'user@example.com'}</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* User Info Header */}
+        <View style={styles.headerContainer}>
+          <View style={styles.avatarContainer}>
+            <Icon name="account-circle" size={100} color="#6366F1" />
           </View>
-          
-          {/* Theme selection */}
-          <View style={styles.themeSelectionContainer}>
+          <Text style={styles.userName}>{userData.name || 'Guest User'}</Text>
+          <Text style={styles.userEmail}>{userData.email || 'user@example.com'}</Text>
+        </View>
+
+        {/* Profile Menu Sections */}
+        <View style={styles.menuSection}>
+          {/* Theme Selection */}
+          <View style={styles.menuSubSection}>
+            <Text style={styles.sectionTitle}>Theme</Text>
+            <View style={styles.themeContainer}>
+              {['Auto', 'Light', 'Dark'].map((themeOption) => (
+                <TouchableOpacity 
+                  key={themeOption}
+                  style={[
+                    styles.themeButton, 
+                    theme.toLowerCase() === themeOption.toLowerCase() && styles.selectedTheme
+                  ]}
+                  onPress={() => handleThemeChange(themeOption.toLowerCase())}
+                >
+                  <Text style={styles.themeButtonText}>{themeOption}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Account Actions */}
+          <View style={styles.menuSubSection}>
+            <Text style={styles.sectionTitle}>Account</Text>
             <TouchableOpacity 
-              style={[styles.themeOption, theme === 'auto' && styles.selectedTheme]} 
-              onPress={() => handleThemeChange('auto')}
+              style={styles.menuItem}
+              onPress={() => openExternalLink('Privacy Policy')}
             >
-              <Text style={styles.themeIcon}>⚫</Text>
-              <Text style={styles.optionText}>Auto</Text>
+              <Icon name="privacy-tip" size={24} color="#6366F1" />
+              <Text style={styles.menuItemText}>Privacy Policy</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity 
-              style={[styles.themeOption, theme === 'light' && styles.selectedTheme]} 
-              onPress={() => handleThemeChange('light')}
+              style={styles.menuItem}
+              onPress={() => openExternalLink('Terms of Service')}
             >
-              <Text style={styles.themeIcon}>☀️</Text>
-              <Text style={styles.optionText}>Light</Text>
+              <Icon name="description" size={24} color="#6366F1" />
+              <Text style={styles.menuItemText}>Terms of Service</Text>
             </TouchableOpacity>
-            
             <TouchableOpacity 
-              style={[styles.themeOption, theme === 'dark' && styles.selectedTheme]} 
-              onPress={() => handleThemeChange('dark')}
+              style={styles.menuItem}
+              onPress={() => openExternalLink('Send Feedback')}
             >
-              <Text style={styles.themeIcon}>🌙</Text>
-              <Text style={styles.optionText}>Dark</Text>
+              <Icon name="feedback" size={24} color="#6366F1" />
+              <Text style={styles.menuItemText}>Send Feedback</Text>
             </TouchableOpacity>
           </View>
-          
-          {/* Location */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🌐</Text>
-            <Text style={styles.menuText}>Location: United States</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
-          
-          {/* Divider */}
-          <View style={styles.divider} />
-          
-          {/* Privacy Policy */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🛡️</Text>
-            <Text style={styles.menuText}>Privacy Policy</Text>
-          </TouchableOpacity>
-          
-          {/* Terms */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>📄</Text>
-            <Text style={styles.menuText}>Terms</Text>
-          </TouchableOpacity>
-          
-          {/* Send Feedback */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>✉️</Text>
-            <Text style={styles.menuText}>Send Feedback</Text>
-          </TouchableOpacity>
-          
-          {/* Delete Account */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🗑️</Text>
-            <Text style={styles.menuText}>Delete Account</Text>
-          </TouchableOpacity>
-          
-          {/* Divider */}
-          <View style={styles.divider} />
-          
-          {/* Log Out */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🚪</Text>
-            <Text style={styles.menuText}>Log Out</Text>
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-};
 
-const styles = StyleSheet.create({
-  modalBackground: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-  },
-  menuContainer: {
-    width: '90%',
-    alignSelf: 'center',
-    marginTop: 80,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 10,
-  },
-  userInfoSection: {
-    padding: 16,
-    paddingBottom: 20,
-  },
-  userName: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  userEmail: {
-    color: 'white',
-    fontSize: 16,
-    opacity: 0.8,
-  },
-  themeSelectionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#3D3D3D',
-  },
-  themeOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    marginHorizontal: 4,
-    borderRadius: 20,
-  },
-  selectedTheme: {
-    backgroundColor: '#444444',
-  },
-  themeIcon: {
-    marginRight: 8,
-    fontSize: 16,
-  },
-  optionText: {
-    color: 'white',
-    fontSize: 15,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  menuIcon: {
-    marginRight: 16,
-    width: 24,
-    textAlign: 'center',
-    fontSize: 18,
-  },
-  menuText: {
-    color: 'white',
-    fontSize: 16,
-    flex: 1,
-  },
-  chevron: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#3D3D3D',
-  },
-});
+          {/* Dangerous Actions */}
+          <View style={styles.dangerSection}>
+            <Text style={styles.dangerSectionTitle}>Danger Zone</Text>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={handleDeleteAccount}
+            >
+              <Icon name="delete-forever" size={24} color="#ffffff" />
+              <Text style={styles.deleteButtonText}>Delete Account</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-// Example of how to use the component in a parent screen
-const HomeScreen = () => {
-  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
-  
-  const userData = {
-    name: 'horace njoroge',
-    email: 'horacenjorge@gmail.com'
-  };
-  
-  return (
-    <SafeAreaView style={{ flex: 1 }}>
-      {/* Your regular screen content here */}
-      <View style={{ flex: 1 }}>
-        {/* Header with profile button */}
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'flex-end', 
-          padding: 16, 
-          backgroundColor: '#1A1A1A' 
-        }}>
-          <TouchableOpacity 
-            onPress={() => setProfileMenuVisible(true)}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#333',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <Text style={{ color: 'white', fontSize: 18 }}>👤</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Rest of your screen content */}
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: 'white' }}>Home Screen Content</Text>
-        </View>
-      </View>
-      
-      {/* Profile menu overlay */}
-      <ProfileMenuOverlay 
-        visible={profileMenuVisible}
-        onClose={() => setProfileMenuVisible(false)}
-        userData={userData}
-      />
+        {/* Logout Button */}
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Icon name="logout" size={24} color="#ffffff" />
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default ProfileMenuOverlay;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f4f4f4',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 30,
+  },
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    paddingVertical: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e1e1',
+  },
+  avatarContainer: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 75,
+    width: 150,
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  userEmail: {
+    fontSize: 16,
+    color: '#666',
+  },
+  menuSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  menuSubSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    marginBottom: 20,
+    padding: 15,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  themeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  themeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    marginHorizontal: 5,
+    backgroundColor: '#f4f4f4',
+    alignItems: 'center',
+  },
+  selectedTheme: {
+    backgroundColor: '#6366F1',
+  },
+  themeButtonText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  menuItemText: {
+    marginLeft: 15,
+    fontSize: 16,
+    color: '#333',
+  },
+  dangerSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  dangerSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FF0000',
+    marginBottom: 15,
+  },
+  deleteButton: {
+    backgroundColor: '#FF0000',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  logoutButton: {
+    marginHorizontal: 20,
+    backgroundColor: '#6366F1',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+});
+
+export default ProfileScreen;
