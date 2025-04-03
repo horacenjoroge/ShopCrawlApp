@@ -1,11 +1,5 @@
-/**
- * LoginScreen component allows users to sign in or create an account.
- * It provides input fields for email and password, a sign-in button,
- * and options to continue with Google, Apple
- */
-
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { TextInput, Divider, Button, HelperText } from 'react-native-paper';
 import { Icon } from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
@@ -27,18 +21,15 @@ const LoginScreen = () => {
   // Email validation
   const validateEmail = (text) => {
     setEmail(text);
-    
     if (!text) {
       setEmailError('Email is required');
       return false;
     }
-    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(text)) {
       setEmailError('Please enter a valid email address');
       return false;
     }
-    
     setEmailError('');
     return true;
   };
@@ -46,17 +37,14 @@ const LoginScreen = () => {
   // Password validation
   const validatePassword = (text) => {
     setPassword(text);
-    
     if (!text) {
       setPasswordError('Password is required');
       return false;
     }
-    
     if (text.length < 6) {
       setPasswordError('Password must be at least 6 characters');
       return false;
     }
-    
     setPasswordError('');
     return true;
   };
@@ -68,38 +56,28 @@ const LoginScreen = () => {
 
   // Handle sign in
   const handleSignIn = async () => {
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-  
-    if (!isEmailValid || !isPasswordValid) {
-      return;
-    }
-  
+    if (!validateEmail(email) || !validatePassword(password)) return;
+
     try {
       setLoading(true);
       setError('');
-      
       console.log('Attempting login with:', { email, password: '***' });
-  
+
       // Call login API
       const userData = await authService.login(email, password);
-  
       console.log('Login Response:', userData);
-  
-      if (userData.error) {
-        throw new Error(userData.error);
-      }
-  
+
+      if (userData.error) throw new Error(userData.error);
+
       // Store user data in AsyncStorage
       await AsyncStorage.setItem('userToken', userData.token);
       await AsyncStorage.setItem('userId', userData.userId);
-      // Store the email that was used for login, not from response
       await AsyncStorage.setItem('userEmail', email);
   
       const storedEmail = await AsyncStorage.getItem('userEmail');
       console.log('Stored Email:', storedEmail);
   
-      // Navigate to home with the email used for login
+      // Navigate to home with the email use for login
      navigation.replace('Main');
     } catch (err) {
       console.log('Login Error:', err.message);
@@ -110,101 +88,100 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Back Button */}
-      <TouchableOpacity 
-        style={styles.backButton} 
-        onPress={() => navigation.goBack()}
-      >
-        <Icon name="arrow-back" size={28} />
-      </TouchableOpacity>
-
-      <Text style={styles.title}>ShopCrawl</Text>
-      <Text style={styles.subtitle}>Sign in or create an account</Text>
-
-      {/* Email Input */}
-      <TextInput
-        label="Email address"
-        mode="outlined"
-        style={styles.input}
-        value={email}
-        onChangeText={validateEmail}
-        error={!!emailError}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      {emailError ? <HelperText type="error">{emailError}</HelperText> : null}
-
-      {/* Password Input */}
-      <TextInput
-        label="Password"
-        mode="outlined"
-        secureTextEntry={secureTextEntry}
-        style={styles.input}
-        value={password}
-        onChangeText={validatePassword}
-        error={!!passwordError}
-        right={
-          <TextInput.Icon 
-            icon={secureTextEntry ? "eye" : "eye-off"} 
-            onPress={toggleSecureEntry} 
-          />
-        }
-      />
-      {passwordError ? <HelperText type="error">{passwordError}</HelperText> : null}
-
-      {/* General Error Message */}
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-      {/* Sign In Button */}
-      <Button 
-        mode="contained" 
-        buttonColor="black" 
-        style={styles.signInButton}
-        onPress={handleSignIn}
-        disabled={loading}
-      >
-        {loading ? <ActivityIndicator color="white" size="small" /> : "Sign In"}
-      </Button>
-
-      {/* Forgot Password */}
-      <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-        <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-      </TouchableOpacity>
-
-      {/* Register Button */}
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.registerText}>
-          Don't have an account? <Text style={{ fontWeight: 'bold' }}>Register</Text>
-        </Text>
-      </TouchableOpacity>
-
-      <Divider style={styles.divider} />
-      <Text style={styles.orContinueText}>Or continue with</Text>
-
-      <View style={styles.iconContainer}>
-        <TouchableOpacity style={styles.iconButton}>
-          <Icon name="google" type="font-awesome" size={28} />
+    <ScrollView contentContainerStyle={styles.scrollView}>
+      <View style={styles.container}>
+        {/* Back Button */}
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={28} color="white" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconButton}>
-          <Icon name="apple" type="font-awesome" size={28} />
+        <Text style={styles.title}>ShopCrawl</Text>
+        <Text style={styles.subtitle}>Sign in or create an account</Text>
+
+        {/* Email Input */}
+        <TextInput
+          label="Email address"
+          mode="outlined"
+          style={styles.input}
+          value={email}
+          onChangeText={validateEmail}
+          error={!!emailError}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        {emailError ? <HelperText type="error">{emailError}</HelperText> : null}
+
+        {/* Password Input */}
+        <TextInput
+          label="Password"
+          mode="outlined"
+          secureTextEntry={secureTextEntry}
+          style={styles.input}
+          value={password}
+          onChangeText={validatePassword}
+          error={!!passwordError}
+          right={<TextInput.Icon icon={secureTextEntry ? "eye" : "eye-off"} onPress={toggleSecureEntry} />}
+        />
+        {passwordError ? <HelperText type="error">{passwordError}</HelperText> : null}
+
+        {/* General Error Message */}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {/* Sign In Button */}
+        <Button 
+          mode="contained" 
+          buttonColor="black" 
+          style={styles.signInButton}
+          onPress={handleSignIn}
+          disabled={loading}
+          textColor="white"
+        >
+          {loading ? <ActivityIndicator color="white" size="small" /> : "Sign In"}
+        </Button>
+
+        {/* Forgot Password */}
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={styles.forgotPasswordText}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.iconButton}>
-          <Icon name="facebook" type="font-awesome" size={28} />
+        {/* Register Button */}
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.registerText}>
+            Don't have an account? <Text style={{ fontWeight: 'bold' }}>Register</Text>
+          </Text>
         </TouchableOpacity>
+
+        <Divider style={styles.divider} />
+        <Text style={styles.orContinueText}>Or continue with</Text>
+
+        <View style={styles.iconContainer}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Icon name="google" type="font-awesome" size={28} color="white" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.iconButton}>
+            <Icon name="apple" type="font-awesome" size={28} color="white" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.iconButton}>
+            <Icon name="facebook" type="font-awesome" size={28} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flexGrow: 1,
+    backgroundColor: '#4F46E5', // Purple background
+  },
   container: {
     flex: 1,
     paddingHorizontal: 30,
     paddingVertical: 60,
-    backgroundColor: 'white',
+    backgroundColor: '#4F46E5', // Match background color
   },
   backButton: {
     position: 'absolute',
@@ -216,41 +193,42 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     textAlign: 'center',
+    color: 'white',
   },
   subtitle: {
     textAlign: 'center',
-    color: 'gray',
+    color: '#D1D5DB',
     marginBottom: 30,
   },
   input: {
-    marginBottom: 5,
+    marginBottom: 10,
+    backgroundColor: '#FFF',
   },
   signInButton: {
     paddingVertical: 5,
     marginTop: 10,
     marginBottom: 20,
+    backgroundColor: 'black',
+    borderRadius: 10,
   },
   errorText: {
     color: 'red',
     textAlign: 'center',
     marginBottom: 10,
   },
-  forgotPasswordText: {
-    textAlign: 'center',
-    color: 'black',
-    marginBottom: 15,
-    textDecorationLine: 'underline',
-  },
   registerText: {
     textAlign: 'center',
     marginVertical: 10,
+    color: 'white',
   },
   divider: {
     marginVertical: 20,
+    backgroundColor: 'white',
   },
   orContinueText: {
     textAlign: 'center',
     marginBottom: 15,
+    color: 'white',
   },
   iconContainer: {
     flexDirection: 'row',
@@ -259,7 +237,7 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 10,
     borderWidth: 1,
-    borderColor: 'lightgray',
+    borderColor: 'white',
     borderRadius: 8,
     width: 90,
     alignItems: 'center',

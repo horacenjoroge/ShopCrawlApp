@@ -248,13 +248,13 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#4F46E5', // Purple background
   },
   container: {
     flex: 1,
     paddingHorizontal: 30,
     paddingVertical: 60,
-    backgroundColor: 'white',
+    backgroundColor: '#4F46E5',
   },
   backButton: {
     position: 'absolute',
@@ -266,19 +266,24 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     textAlign: 'center',
+    color: 'white', // White text for contrast
   },
   subtitle: {
     textAlign: 'center',
-    color: 'gray',
+    color: '#D1D5DB', // Light gray text
     marginBottom: 30,
   },
   input: {
     marginBottom: 10,
+    backgroundColor: '#FFF',
+    color: 'white',
   },
   signInButton: {
     paddingVertical: 5,
     marginTop: 10,
     marginBottom: 20,
+    backgroundColor: 'black',
+    borderRadius: 10,
   },
   errorText: {
     color: 'red',
@@ -288,13 +293,16 @@ const styles = StyleSheet.create({
   registerText: {
     textAlign: 'center',
     marginVertical: 10,
+    color: 'white', // White text
   },
   divider: {
     marginVertical: 20,
+    backgroundColor: 'white', // White divider
   },
   orContinueText: {
     textAlign: 'center',
     marginBottom: 15,
+    color: 'white', // White text for visibility
   },
   iconContainer: {
     flexDirection: 'row',
@@ -303,11 +311,12 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 10,
     borderWidth: 1,
-    borderColor: 'lightgray',
+    borderColor: 'black', // White border for contrast
     borderRadius: 8,
     width: 90,
     alignItems: 'center',
   },
 });
+
 
 export default RegisterScreen;

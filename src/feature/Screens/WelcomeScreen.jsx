@@ -1,88 +1,93 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, Platform } from 'react-native';
 import { Text, Button } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts } from 'expo-font';
 
-/**
- * WelcomeScreen component displays a welcome message and navigation buttons.
- * 
- * @param {object} props - The component props.
- * @param {object} props.navigation - The navigation object used to navigate between screens.
- */
 const WelcomeScreen = ({ navigation }) => {
-  // Reference to the animated value for fade-in effect
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const bounceAnim = useRef(new Animated.Value(0)).current;
 
-  // useEffect hook to start the fade-in animation when the component mounts
   useEffect(() => {
+    // Fade-in effect
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 1000,
       useNativeDriver: true,
     }).start();
+
+    // Bounce effect for buttons
+    Animated.spring(bounceAnim, {
+      toValue: 1,
+      friction: 4,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
-  // Load custom fonts
   const [fontsLoaded] = useFonts({
     Boldonose: require('../../../assets/fonts/Boldonse-Regular.ttf'),
     RobotoBold: require('../../../assets/fonts/Roboto_Condensed-Bold.ttf'),
   });
 
-  // If fonts are not loaded, return null to prevent rendering
   if (!fontsLoaded) {
     return null;
   }
 
   return (
-    <View style={styles.container}>
-      {/* Animated view for the welcome message */}
-      <Animated.View style={{ opacity: fadeAnim }}>
-        <Text style={[styles.title, { fontFamily: 'Boldonose' }]}>Welcome to</Text>
-        <Text style={[styles.brand, { fontFamily: 'RobotoBold' }]}>ShopCrawl</Text>
-      </Animated.View>
+    <LinearGradient colors={['#6366F1', '#4F46E5']} style={styles.container}>
+      <View style={styles.content}>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <Text style={[styles.title, { fontFamily: 'Boldonose' }]}>Welcome to</Text>
+          <Text style={[styles.brand, { fontFamily: 'RobotoBold' }]}>ShopCrawl</Text>
+        </Animated.View>
 
-      {/* Animated view for the navigation buttons */}
-      <Animated.View style={[styles.buttonContainer, { opacity: fadeAnim }]}>  
-        <Button
-          mode="contained"
-          onPress={() => navigation.navigate('Login')}
-          style={styles.loginButton}
-          labelStyle={styles.buttonText}
-        >
-          Register / Login
-        </Button>
+        {/* Animated button */}
+        <Animated.View style={[styles.buttonContainer, { transform: [{ scale: bounceAnim }] }]}>
+          <Button
+            mode="contained"
+            onPress={() => navigation.navigate('Login')}
+            style={styles.loginButton}
+            labelStyle={styles.buttonText}
+          >
+            Register / Login
+          </Button>
 
-        <Button
-          mode="outlined"
-          onPress={() => navigation.navigate('Home')}
-          style={styles.guestButton}
-          labelStyle={styles.guestButtonText}
-        >
-          Continue as Guest
-        </Button>
-      </Animated.View>
-    </View>
+          <Button
+            mode="outlined"
+            onPress={() => navigation.navigate('Home')}
+            style={styles.guestButton}
+            labelStyle={styles.guestButtonText}
+          >
+            Continue as Guest
+          </Button>
+        </Animated.View>
+      </View>
+    </LinearGradient>
   );
 };
 
-// Styles for the WelcomeScreen component
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 26,
+    color: '#fff',
     marginBottom: 5,
-    color: 'black',
+    textAlign: 'center',
   },
   brand: {
-    fontSize: 34,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: 'black',
+    color: '#fff',
     marginBottom: 40,
+    textAlign: 'center',
   },
   buttonContainer: {
     width: '100%',
@@ -90,24 +95,27 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     width: 250,
-    marginBottom: 20,
-    backgroundColor: 'black',
-    borderRadius: 10,
-    elevation: 4,
+    marginBottom: 15,
+    backgroundColor: '#f5f7fa',
+    borderRadius: 12,
+    elevation: 5,
   },
   buttonText: {
-    color: 'white',
+    color: '#6366F1',
     fontSize: 16,
+    fontWeight: 'bold',
   },
   guestButton: {
     width: 250,
-    borderColor: 'black',
-    borderRadius: 10,
-    elevation: 2,
+    borderColor: '#fff',
+    borderWidth: 2,
+    borderRadius: 12,
+    elevation: 3,
   },
   guestButtonText: {
-    color: 'black',
+    color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
