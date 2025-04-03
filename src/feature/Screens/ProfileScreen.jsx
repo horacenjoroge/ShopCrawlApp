@@ -9,12 +9,14 @@ import {
   SafeAreaView,
   Image,
   Modal,
-  Dimensions
+  Dimensions,
+  Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { useTheme } from '../../context/ThemeContext'; // Adjust import path as needed
+import { useTheme } from '../../context/ThemeContext';
+import { authService } from '../../services/api';
 
 // Color Palette
 const COLOR_PALETTE = [
@@ -92,18 +94,6 @@ const ProfileScreen = ({ navigation }) => {
       await AsyncStorage.setItem('primaryColor', color.primary);
       setSelectedColor(color);
       setIsColorModalVisible(false);
-      
-      // Update app theme with new primary color
-      // You might want to implement a more sophisticated color management
-      // This is a simplified example
-      const newTheme = {
-        ...currentTheme,
-        primary: color.primary
-      };
-      
-      // Here you would update your theme context or global theme
-      // This is just a placeholder - implement based on your theme system
-      // setAppTheme(newTheme);
     } catch (error) {
       console.error('Error saving color:', error);
     }
@@ -121,8 +111,8 @@ const ProfileScreen = ({ navigation }) => {
     launchImageLibrary(options, async (response) => {
       if (response.didCancel) {
         console.log('User cancelled image picker');
-      } else if (response.error) {
-        console.log('ImagePicker Error: ', response.error);
+      } else if (response.errorCode) {
+        console.log('ImagePicker Error: ', response.errorMessage);
       } else {
         const image = response.assets?.[0];
         if (image) {
@@ -141,6 +131,78 @@ const ProfileScreen = ({ navigation }) => {
         }
       }
     });
+  };
+
+  // Delete account handler
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Call backend API to delete account
+              await authService.deleteAccount();
+
+              // Clear AsyncStorage
+              await AsyncStorage.clear();
+
+              // Navigate to Welcome screen
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }]
+              });
+            } catch (error) {
+              console.error('Account deletion error:', error);
+              
+              // Fallback navigation
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }]
+              });
+              
+              Alert.alert('Delete Failed', error.error || 'Unable to delete account. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      // Call logout API
+      await authService.logout();
+
+      // Clear AsyncStorage
+      await AsyncStorage.removeItem('userEmail');
+      await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('userToken');
+
+      // Navigate to Welcome screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Welcome' }]
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      
+      // Fallback navigation in case of error
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Welcome' }]
+      });
+      
+      Alert.alert('Logout Failed', error.error || 'Unable to log out. Please try again.');
+    }
   };
 
   // Color Picker Modal
@@ -258,13 +320,23 @@ const ProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Rest of the existing menu items */}
+          {/* Dangerous Actions */}
+          <View style={[styles.dangerSection, { backgroundColor: currentTheme.cardBackground }]}>
+            <Text style={[styles.dangerSectionTitle, { color: '#FF0000' }]}>Danger Zone</Text>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={handleDeleteAccount}
+            >
+              <Icon name="delete-forever" size={24} color="#ffffff" />
+              <Text style={styles.deleteButtonText}>Delete Account</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Logout Button */}
         <TouchableOpacity 
           style={[styles.logoutButton, { backgroundColor: currentTheme.primary }]}
-          onPress={() => {/* Logout logic */}}
+          onPress={handleLogout}
         >
           <Icon name="logout" size={24} color="#ffffff" />
           <Text style={styles.logoutButtonText}>Log Out</Text>
@@ -276,7 +348,6 @@ const ProfileScreen = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -401,6 +472,30 @@ const styles = StyleSheet.create({
   closeModalButtonText: {
     color: 'black',
     fontWeight: 'bold',
+  },
+  dangerSection: {
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  dangerSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  deleteButton: {
+    backgroundColor: '#FF0000',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   logoutButton: {
     marginHorizontal: 20,
