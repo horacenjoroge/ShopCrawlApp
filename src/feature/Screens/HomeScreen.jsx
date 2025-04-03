@@ -12,24 +12,24 @@ import {
   Animated, 
   ActivityIndicator,
   Modal,
-  Linking
+  Linking,
+  StatusBar,
+  SafeAreaView
 } from 'react-native';
 import { Text, Card } from 'react-native-paper';
 import { Icon } from '@rneui/themed';
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+// Removed LinearGradient import
 
 const { width } = Dimensions.get('window');
-const productCardWidth = width * 0.7;
+const productCardWidth = width * 0.8;
 
-const categories = [
-  { id: 1, name: 'Best protein powder', color: '#FFDF85' },
-  { id: 2, name: 'Top-rated jogging strollers', color: '#FFA082' },
-  { id: 3, name: 'Best moisturizers for dry skin', color: '#87E1E1' },
-  { id: 4, name: 'Women\'s hiking boots', color: '#FFB6B6' },
-];
+// API Base URL
+const API_BASE_URL = 'http://192.168.100.54:3000/api';
 
+// API configurations
 const AMAZON_API_CONFIG = {
   baseURL: 'https://real-time-amazon-data.p.rapidapi.com',
   headers: {
@@ -38,40 +38,43 @@ const AMAZON_API_CONFIG = {
   }
 };
 
-const SERP_API_KEY = '7adf35f97c008c6ddce7921ee949027b7b8b34fd4fa969bd54d613a413093dc1';
+const SERP_API_KEY = 'f5f86e39c42a05dcb61c807ec5782b89eb3149cdf168e103c7e7f8889b87cb18';
 
-const DEFAULT_PRODUCT_ASINS = [
-  'B07ZPKBL9V',
-  'B08RCJCGDJ',
-  'B08PF1Y7Q5',
-  'B07VKG1LFZ'
+// Trending categories
+const trendingCategories = [
+  { id: 1, name: 'Tech Gadgets', color: '#6366F1' },
+  { id: 2, name: 'Fitness Gear', color: '#F59E0B' },
+  { id: 3, name: 'Home Decor', color: '#10B981' },
+  { id: 4, name: 'Beauty Products', color: '#EC4899' },
 ];
 
+// Fallback products if API fails
 const FALLBACK_PRODUCTS = [
   {
     id: 'fallback1',
-    name: 'Premium Protein Powder',
-    description: 'High-quality protein supplement',
-    price: '$29.99',
+    name: 'Premium Wireless Earbuds',
+    description: 'Noise cancelling with 24-hour battery life',
+    price: '$79.99',
+    image: 'https://via.placeholder.com/300',
+    store: 'Amazon',
+    productUrl: 'https://www.amazon.com',
+    category: 'Electronics',
+    recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
+  },
+  {
+    id: 'fallback2',
+    name: 'Smart Fitness Tracker',
+    description: 'Track your activity, sleep, and heart rate',
+    price: '$49.99',
     image: 'https://via.placeholder.com/300',
     store: 'Amazon',
     productUrl: 'https://www.amazon.com',
     category: 'Fitness',
     recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
-  },
-  {
-    id: 'fallback2',
-    name: 'All-Terrain Jogging Stroller',
-    description: 'Durable stroller for active parents',
-    price: '$199.99',
-    image: 'https://via.placeholder.com/300',
-    store: 'Amazon',
-    productUrl: 'https://www.amazon.com',
-    category: 'Baby',
-    recommendations: [{ id: '1', icon: require('../../../assets/amazon.jpg') }]
   }
 ];
 
+// Cache functions for product data
 const cacheProduct = async (asin, product) => {
   try {
     await AsyncStorage.setItem(`product_${asin}`, JSON.stringify(product));
@@ -90,6 +93,7 @@ const getCachedProduct = async (asin) => {
   }
 };
 
+// Category Pill Component
 const CategoryPill = ({ category, onPress }) => (
   <TouchableOpacity 
     style={[styles.categoryPill, { backgroundColor: category.color }]} 
@@ -99,6 +103,7 @@ const CategoryPill = ({ category, onPress }) => (
   </TouchableOpacity>
 );
 
+// Recommendation Badge Component
 const RecommendBadge = ({ icon }) => (
   <View style={styles.recommendBadge}>
     {typeof icon === 'string' ? (
@@ -109,6 +114,7 @@ const RecommendBadge = ({ icon }) => (
   </View>
 );
 
+// Share Feature Component
 const ShareFeature = () => {
   const onShare = async () => {
     try {
@@ -124,91 +130,67 @@ const ShareFeature = () => {
 
   return (
     <View style={styles.shareContainer}>
-      <View style={styles.shareIconsRow}>
-        <View style={[styles.shareIconCircle, { backgroundColor: '#FFB6B6' }]}>
-          <Icon name="smile" type="feather" size={24} color="#000" />
-        </View>
-        <View style={[styles.shareIconCircle, { backgroundColor: '#FFDF85' }]}>
-          <Icon name="heart" type="feather" size={24} color="#000" />
-        </View>
-        <View style={[styles.shareIconCircle, { backgroundColor: '#87E1E1' }]}>
-          <Icon name="smile" type="feather" size={24} color="#000" />
-        </View>
-      </View>
+      <Text style={styles.shareTitle}>Love ShopCrawl?</Text>
       <TouchableOpacity style={styles.shareButton} onPress={onShare}>
-        <Text style={styles.shareButtonText}>Love ShopCrawl? Share it with friends!</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.closeShareButton}>
-        <Icon name="x" type="feather" size={24} color="#999" />
+        <Icon name="share" type="feather" size={18} color="#FFF" style={styles.shareIcon} />
+        <Text style={styles.shareButtonText}>Share with friends</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-const DealCard = ({ item, onSave, onPress }) => (
-  <TouchableOpacity onPress={() => onPress(item)}>
-    <Card style={[styles.dealCard, { width: productCardWidth }]}>
+// Deal Card Component
+const DealCard = ({ item, onSave, onPress, isSaved }) => (
+  <TouchableOpacity 
+    onPress={() => onPress(item)}
+    activeOpacity={0.9}
+  >
+    <Card style={styles.dealCard}>
       {item.discount && (
         <View style={styles.discountBadge}>
           <Text style={styles.discountText}>{item.discount}</Text>
         </View>
       )}
-      <TouchableOpacity style={styles.bookmarkButton} onPress={() => onSave(item)}>
-        <Icon name="bookmark-outline" type="material-community" size={24} color="#888" />
+      <TouchableOpacity 
+        style={styles.bookmarkButton} 
+        onPress={() => onSave(item)}
+      >
+        <Icon 
+          name={isSaved ? "bookmark" : "bookmark-outline"} 
+          type="material-community" 
+          size={24} 
+          color={isSaved ? "#F59E0B" : "#FFF"} 
+        />
       </TouchableOpacity>
       <Card.Cover 
         source={{ uri: item.image }} 
         style={styles.dealImage} 
       />
       <Card.Content style={styles.dealContent}>
-        <Text style={styles.dealName}>{item.name}</Text>
+        <View style={styles.storeContainer}>
+          <Image 
+            source={require('../../../assets/amazon.jpg')} 
+            style={styles.storeIcon} 
+            resizeMode="contain" 
+          />
+          <Text style={styles.storeName}>{item.store || 'Amazon'}</Text>
+        </View>
+        <Text style={styles.dealName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.dealDescription} numberOfLines={2}>
           {item.description || 'No description available'}
         </Text>
-        {item.recommendations && item.recommendations.length > 0 && (
-          <View style={styles.recommendRow}>
-            <Text style={styles.recommendText}>RECOMMENDED BY:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.recommendBadges}>
-                {item.recommendations.map((rec, index) => (
-                  <RecommendBadge key={index} icon={rec.icon} />
-                ))}
-                {item.recommendations.length > 4 && (
-                  <View style={styles.moreBadge}>
-                    <Text style={styles.moreText}>+{item.recommendations.length - 4}</Text>
-                  </View>
-                )}
-              </View>
-            </ScrollView>
-          </View>
-        )}
         <View style={styles.priceRow}>
-          <View style={styles.storeContainer}>
-            <Image 
-              source={require('../../../assets/amazon.jpg')} 
-              style={styles.storeIcon} 
-              resizeMode="contain" 
-            />
-            <Text style={styles.storeName}>{item.store || 'Amazon'}</Text>
-          </View>
-          <View style={styles.priceContainer}>
-            {item.originalPrice && (
-              <Text style={styles.originalPrice}>{item.originalPrice}</Text>
-            )}
-            <Text style={styles.discountedPrice}>{item.price}</Text>
-          </View>
+          {item.originalPrice && (
+            <Text style={styles.originalPrice}>{item.originalPrice}</Text>
+          )}
+          <Text style={styles.discountedPrice}>{item.price}</Text>
         </View>
       </Card.Content>
-      <TouchableOpacity style={styles.categoryContainer}>
-        <Text style={styles.categoryText}>
-          {typeof item.category === 'object' ? item.category.name : (item.category || 'Amazon Product')}
-        </Text>
-        <Icon name="arrow-right" type="feather" size={18} color="#000" />
-      </TouchableOpacity>
     </Card>
   </TouchableOpacity>
 );
 
+// Main HomeScreen Component
 const HomeScreen = ({ navigation, route = {} }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickyHeaderPosition = useRef(0);
@@ -216,17 +198,26 @@ const HomeScreen = ({ navigation, route = {} }) => {
   const [userEmail, setUserEmail] = useState('');
   const [avatarLetter, setAvatarLetter] = useState('S');
   const [deals, setDeals] = useState([]);
+  const [trendingDeals, setTrendingDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [savedProducts, setSavedProducts] = useState([]);
 
+  // Check if a product is saved
+  const isProductSaved = useCallback((productId) => {
+    return savedProducts.some(item => item.id === productId);
+  }, [savedProducts]);
+
+  // Handle search submit
   const handleSearchSubmit = () => {
     if (searchQuery.trim() !== "") {
       handleSearch();
     }
   };
 
+  // Fetch user data (email, etc.)
   const fetchUserData = async () => {
     try {
       let email = route.params?.userEmail || await AsyncStorage.getItem('userEmail');
@@ -239,18 +230,87 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Load saved products from AsyncStorage
+  const loadSavedProducts = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('savedProducts');
+      if (saved) {
+        setSavedProducts(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading saved products:', error);
+    }
+  };
+
+  // Initial load of user data, deals and saved products
   useEffect(() => {
     fetchUserData();
     fetchDeals();
+    loadSavedProducts();
+    fetchTrendingFromHistory();
   }, [route.params]);
 
   useFocusEffect(
     useCallback(() => {
       fetchUserData();
+      loadSavedProducts();
       return () => {};
     }, [])
   );
 
+  // Fetch trending products based on user's search history
+  const fetchTrendingFromHistory = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
+
+      // First get user's search history
+      const historyResponse = await axios.get(`${API_BASE_URL}/history`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token
+        }
+      });
+
+      // Extract search terms from history
+      let searchTerms = [];
+      if (historyResponse.data.today) {
+        searchTerms = [...searchTerms, ...historyResponse.data.today.map(h => h.query)];
+      }
+      if (historyResponse.data.pastWeek) {
+        searchTerms = [...searchTerms, ...historyResponse.data.pastWeek.map(h => h.query)];
+      }
+      if (historyResponse.data.pastMonth) {
+        searchTerms = [...searchTerms, ...historyResponse.data.pastMonth.map(h => h.query)];
+      }
+
+      // If no search history, use trending categories
+      if (searchTerms.length === 0) {
+        searchTerms = trendingCategories.map(cat => cat.name);
+      }
+
+      // Select a random search term from history
+      const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
+      
+      // Use it to fetch trending products
+      if (randomTerm) {
+        const results = await searchProducts(randomTerm);
+        if (results.length > 0) {
+          setTrendingDeals(results);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching trending from history:', error);
+      // Fallback to trending categories if history API fails
+      const randomCat = trendingCategories[Math.floor(Math.random() * trendingCategories.length)];
+      const results = await searchProducts(randomCat.name);
+      if (results.length > 0) {
+        setTrendingDeals(results);
+      }
+    }
+  };
+
+  // Search using SERP API
   const searchSerpApi = async (query) => {
     try {
       const response = await axios.get('https://serpapi.com/search.json', {
@@ -278,6 +338,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Search using Amazon API
   const searchAmazonProducts = async (query) => {
     try {
       const response = await axios.get(`${AMAZON_API_CONFIG.baseURL}/search`, {
@@ -309,6 +370,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Combined search function (tries SERP first, then Amazon)
   const searchProducts = async (query) => {
     setError(null);
     let results = await searchSerpApi(query);
@@ -321,6 +383,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
     return results;
   };
 
+  // Fetch product details from Amazon API
   const fetchProductDetails = async (asin) => {
     const cached = await getCachedProduct(asin);
     if (cached) return cached;
@@ -353,6 +416,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
     } catch (error) {
       console.error(`Primary endpoint failed for ASIN ${asin}:`, error.message);
       
+      // Try search endpoint as fallback if rate limited
       if (error.response?.status === 429) {
         console.log(`429 received for ASIN ${asin}, attempting search endpoint fallback`);
         try {
@@ -384,13 +448,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
         }
       }
 
-      console.log('Error details:', {
-        asin,
-        status: error.response?.status,
-        message: error.message,
-        headers: error.response?.headers
-      });
-
+      // Return a placeholder if all else fails
       return {
         id: asin,
         name: 'Product Information Unavailable',
@@ -404,10 +462,15 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Fetch initial deals
   const fetchDeals = async () => {
     try {
       setLoading(true);
       setError(null);
+
+      const DEFAULT_PRODUCT_ASINS = [
+        'B07ZPKBL9V', 'B08RCJCGDJ', 'B08PF1Y7Q5', 'B07VKG1LFZ'
+      ];
 
       const productPromises = DEFAULT_PRODUCT_ASINS.map(async (asin) => {
         try {
@@ -440,25 +503,85 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Save product to favorites (both locally and on backend)
   const handleSaveProduct = async (product) => {
     try {
-      const savedProductsJson = await AsyncStorage.getItem('savedProducts');
-      let savedProducts = savedProductsJson ? JSON.parse(savedProductsJson) : [];
-      const isAlreadySaved = savedProducts.some(item => item.id === product.id);
-      
-      if (isAlreadySaved) {
-        savedProducts = savedProducts.filter(item => item.id !== product.id);
-      } else {
-        savedProducts.push(product);
+      // First get the auth token
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        console.log('No auth token found, please log in to save products');
+        // You could show a login prompt here
+        return;
       }
       
-      await AsyncStorage.setItem('savedProducts', JSON.stringify(savedProducts));
-      console.log(isAlreadySaved ? 'Product removed from saved items' : 'Product saved');
+      // Format product data consistently for the API
+      const productData = {
+        productId: product.id,
+        productData: {
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          store: product.store || 'Amazon',
+          description: product.description || 'No description available',
+          productUrl: product.productUrl,
+          category: typeof product.category === 'object' ? product.category.name : product.category
+        }
+      };
+      
+      // Make API call to save/unsave the product
+      console.log(`Saving product to ${API_BASE_URL}/products/save`);
+      const response = await axios.post(
+        `${API_BASE_URL}/products/save`, 
+        productData,
+        { headers: { 'x-auth-token': token } }
+      );
+      
+      console.log('Save response:', response.data);
+      
+      // Also update locally for immediate UI feedback
+      const isAlreadySaved = savedProducts.some(item => item.id === product.id);
+      let updatedSavedProducts;
+      
+      if (isAlreadySaved) {
+        // Remove product from saved list
+        updatedSavedProducts = savedProducts.filter(item => item.id !== product.id);
+      } else {
+        // Add product to saved list
+        updatedSavedProducts = [...savedProducts, product];
+      }
+      
+      // Update state and AsyncStorage
+      setSavedProducts(updatedSavedProducts);
+      await AsyncStorage.setItem('savedProducts', JSON.stringify(updatedSavedProducts));
+      
     } catch (err) {
-      console.error('Error saving product:', err);
+      console.error('Error saving product to backend:', err);
+      
+      // If server call fails, at least save to local storage as fallback
+      try {
+        const isAlreadySaved = savedProducts.some(item => item.id === product.id);
+        let updatedSavedProducts;
+        
+        if (isAlreadySaved) {
+          updatedSavedProducts = savedProducts.filter(item => item.id !== product.id);
+        } else {
+          updatedSavedProducts = [...savedProducts, product];
+        }
+        
+        setSavedProducts(updatedSavedProducts);
+        await AsyncStorage.setItem('savedProducts', JSON.stringify(updatedSavedProducts));
+        
+        console.log(isAlreadySaved ? 
+          'Product removed from saved items (local only)' : 
+          'Product saved locally (API call failed)'
+        );
+      } catch (localErr) {
+        console.error('Error saving product locally:', localErr);
+      }
     }
   };
 
+  // Handle search action
   const handleSearch = async () => {
     if (searchQuery.trim()) {
       saveSearchToHistory(searchQuery);
@@ -479,12 +602,13 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Save search to history
   const saveSearchToHistory = async (query) => {
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
       
-      await axios.post('http://192.168.100.54:3000/api/history', 
+      await axios.post(`${API_BASE_URL}/history`, 
         { query },
         { headers: { 'x-auth-token': token } }
       );
@@ -493,6 +617,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Handle category selection
   const handleCategorySelect = async (categoryName) => {
     saveSearchToHistory(categoryName);
     setLoading(true);
@@ -510,11 +635,13 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
-  const showRandomProduct = (item) => {
+  // Show product detail modal
+  const showProductDetail = (item) => {
     setSelectedProduct(item);
     setModalVisible(true);
   };
 
+  // Open product URL in browser
   const openProductUrl = async (url) => {
     try {
       const supported = await Linking.canOpenURL(url);
@@ -528,6 +655,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
     }
   };
 
+  // Animation values for sticky header
   const headerOpacity = scrollY.interpolate({
     inputRange: [stickyHeaderPosition.current, stickyHeaderPosition.current + 50],
     outputRange: [0, 1],
@@ -539,12 +667,15 @@ const HomeScreen = ({ navigation, route = {} }) => {
     { useNativeDriver: false }
   );
 
-  const onTodaysDealsLayout = (event) => {
+  const onDealsLayout = (event) => {
     stickyHeaderPosition.current = event.nativeEvent.layout.y - 60;
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+      
+      {/* Avatar Profile Button */}
       <View style={styles.avatarTopContainer}>
         <TouchableOpacity 
           style={styles.avatarContainer} 
@@ -554,6 +685,7 @@ const HomeScreen = ({ navigation, route = {} }) => {
         </TouchableOpacity>
       </View>
 
+      {/* Sticky Search Header */}
       <Animated.View 
         style={[styles.stickyHeader, {
           opacity: headerOpacity,
@@ -565,20 +697,17 @@ const HomeScreen = ({ navigation, route = {} }) => {
           }]
         }]}
       >
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#FFFFFF' }} />
         <View style={styles.stickySearchBarWrapper}>
           <View style={styles.stickySearchBar}>
+            <Icon name="search" type="feather" size={18} color="#888" style={{marginRight: 8}} />
             <TextInput
               style={styles.stickySearchInput}
-              placeholder="Search..."
+              placeholder="Search products..."
               placeholderTextColor="#888"
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearchSubmit}
             />
-            <TouchableOpacity onPress={handleSearch}>
-              <Icon name="search" type="feather" size={20} color="#888" />
-            </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
@@ -589,27 +718,27 @@ const HomeScreen = ({ navigation, route = {} }) => {
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
+        {/* Main Search Section - Gradient replaced with regular View */}
         <View style={styles.searchSection}>
-          <Text style={styles.searchTitle}>What are you shopping for?</Text>
+          <Text style={styles.searchTitle}>Discover Amazing Deals</Text>
           <View style={styles.searchBar}>
+            <Icon name="search" type="feather" size={18} color="#888" style={{marginLeft: 10}} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search..."
+              placeholder="What are you shopping for?"
               placeholderTextColor="#888"
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearchSubmit}
             />
-            <TouchableOpacity onPress={handleSearch}>
-              <Icon name="search" type="feather" size={24} color="#888" />
-            </TouchableOpacity>
           </View>
+          <Text style={styles.trendingText}>Trending Categories</Text>
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesContainer}
           >
-            {categories.map(category => (
+            {trendingCategories.map(category => (
               <CategoryPill 
                 key={category.id} 
                 category={category} 
@@ -619,51 +748,80 @@ const HomeScreen = ({ navigation, route = {} }) => {
           </ScrollView>
         </View>
 
+        {/* Share Section */}
         <ShareFeature />
 
-        <View style={styles.headerContainer} onLayout={onTodaysDealsLayout}>
-          <Text style={styles.headerText}>Today's Deals on Vetted Picks</Text>
+        {/* Today's Deals Section */}
+        <View style={styles.sectionContainer} onLayout={onDealsLayout}>
+          <Text style={styles.sectionTitle}>Today's Top Deals</Text>
+          
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#6366F1" />
+              <Text style={styles.loadingText}>Finding the best deals...</Text>
+            </View>
+          ) : (
+            <>
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                  <TouchableOpacity style={styles.retryButton} onPress={fetchDeals}>
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              
+              {deals.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  decelerationRate="fast"
+                  snapToInterval={productCardWidth + 15}
+                  contentContainerStyle={styles.dealsScrollContainer}
+                >
+                  {deals.map(deal => (
+                    <DealCard 
+                      key={deal.id} 
+                      item={deal} 
+                      onSave={handleSaveProduct}
+                      onPress={showProductDetail}
+                      isSaved={isProductSaved(deal.id)}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+            </>
+          )}
         </View>
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FFC107" />
-            <Text style={styles.loadingText}>Loading deals...</Text>
+        {/* Trending Based on History Section */}
+        {trendingDeals.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Recommended For You</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              decelerationRate="fast"
+              snapToInterval={productCardWidth + 15}
+              contentContainerStyle={styles.dealsScrollContainer}
+            >
+              {trendingDeals.map(deal => (
+                <DealCard 
+                  key={deal.id} 
+                  item={deal} 
+                  onSave={handleSaveProduct}
+                  onPress={showProductDetail}
+                  isSaved={isProductSaved(deal.id)}
+                />
+              ))}
+            </ScrollView>
           </View>
-        ) : (
-          <>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={fetchDeals}>
-                  <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {deals.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                pagingEnabled
-                decelerationRate="fast"
-                snapToInterval={productCardWidth + 30}
-                contentContainerStyle={styles.dealsScrollContainer}
-              >
-                {deals.map(deal => (
-                  <DealCard 
-                    key={deal.id} 
-                    item={deal} 
-                    onSave={handleSaveProduct}
-                    onPress={showRandomProduct}
-                  />
-                ))}
-              </ScrollView>
-            ) : null}
-          </>
         )}
+        
         <View style={{ height: 20 }} />
       </Animated.ScrollView>
 
+      {/* Product Detail Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -674,64 +832,91 @@ const HomeScreen = ({ navigation, route = {} }) => {
           <View style={styles.modalContent}>
             {selectedProduct && (
               <>
+                <TouchableOpacity 
+                  style={styles.modalCloseButton}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Icon name="x" type="feather" size={24} color="#666" />
+                </TouchableOpacity>
+                
                 <Image 
                   source={{ uri: selectedProduct.image }} 
                   style={styles.modalImage} 
                   resizeMode="contain"
                 />
+                
+                <TouchableOpacity 
+                  style={styles.modalBookmarkButton}
+                  onPress={() => handleSaveProduct(selectedProduct)}
+                >
+                  <Icon 
+                    name={isProductSaved(selectedProduct.id) ? "bookmark" : "bookmark-outline"} 
+                    type="material-community" 
+                    size={28} 
+                    color={isProductSaved(selectedProduct.id) ? "#F59E0B" : "#666"} 
+                  />
+                </TouchableOpacity>
+                
+                <View style={styles.modalStoreRow}>
+                  <View style={styles.modalStoreContainer}>
+                    <Image 
+                      source={require('../../../assets/amazon.jpg')} 
+                      style={styles.modalStoreIcon} 
+                      resizeMode="contain" 
+                    />
+                    <Text style={styles.modalStoreName}>{selectedProduct.store || 'Amazon'}</Text>
+                  </View>
+                  <Text style={styles.modalPrice}>{selectedProduct.price}</Text>
+                </View>
+                
                 <Text style={styles.modalTitle}>{selectedProduct.name}</Text>
-                <Text style={styles.modalPrice}>{selectedProduct.price}</Text>
                 <Text style={styles.modalDescription}>
                   {selectedProduct.description || 'No description available'}
                 </Text>
+                
                 <TouchableOpacity 
                   style={styles.visitButton}
                   onPress={() => openProductUrl(selectedProduct.productUrl)}
                 >
-                  <Text style={styles.visitButtonText}>Visit Product Page</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.closeButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.closeButtonText}>Close</Text>
+                  <Text style={styles.visitButtonText}>View on {selectedProduct.store}</Text>
+                  <Icon name="external-link" type="feather" size={18} color="#FFF" style={{marginLeft: 8}} />
                 </TouchableOpacity>
               </>
             )}
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f7f5f2',
+    backgroundColor: '#f5f7fa',
   },
   avatarTopContainer: {
     position: 'absolute',
-    top: 40,
-    right: 15,
+    top: Platform.OS === 'ios' ? 50 : 20,
+    right: 20,
     zIndex: 10,
   },
   avatarContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#006156',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 3,
   },
   avatarText: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   scrollView: {
@@ -742,286 +927,228 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     zIndex: 99,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-    paddingTop: Platform.OS === 'ios' ? 50 : 8,
-    paddingBottom: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+    paddingTop: Platform.OS === 'ios' ? 50 : 15,
+    paddingBottom: 10,
     paddingHorizontal: 15,
   },
   stickySearchBarWrapper: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FFF',
     width: '100%',
   },
   stickySearchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EEEEEE',
-    borderRadius: 20,
+    backgroundColor: '#f2f3f5',
+    borderRadius: 12,
     paddingHorizontal: 15,
     height: 40,
-    borderWidth: 1,
-    borderColor: '#DDDDDD',
   },
   stickySearchInput: {
     flex: 1,
     fontSize: 14,
-    paddingVertical: 8,
-    paddingRight: 5,
+    color: '#333',
   },
   searchSection: {
-    backgroundColor: '#FFB6B6',
     paddingTop: 80,
-    paddingBottom: 20,
+    paddingBottom: 25,
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    backgroundColor: '#6366F1', // Solid background color instead of gradient
   },
   searchTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#fff',
     marginBottom: 20,
   },
   searchBar: {
     backgroundColor: '#fff',
     height: 50,
-    borderRadius: 25,
-    paddingHorizontal: 15,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
   },
   searchInput: {
     fontSize: 16,
     flex: 1,
+    marginLeft: 10,
+    color: '#333',
+  },
+  trendingText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 12,
+    fontWeight: '500',
   },
   categoriesContainer: {
-    paddingBottom: 10,
+    paddingBottom: 5,
   },
   categoryPill: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
     marginRight: 10,
+    marginBottom: 5,
   },
   categoryPillText: {
+    color: '#fff',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 14,
   },
   shareContainer: {
     backgroundColor: '#fff',
     margin: 20,
-    borderRadius: 20,
+    borderRadius: 15,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
-  },
-  shareIconsRow: {
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 15,
-  },
-  shareIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: 5,
+  },
+  shareTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
   shareButton: {
-    backgroundColor: '#333',
-    borderRadius: 25,
-    paddingVertical: 15,
+    backgroundColor: '#6366F1',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  shareIcon: {
+    marginRight: 6,
   },
   shareButtonText: {
     color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sectionContainer: {
+    marginTop: 15,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
-    fontSize: 16,
-  },
-  closeShareButton: {
-    position: 'absolute',
-    top: 15,
-    right: 15,
-  },
-  headerContainer: {
-    padding: 20,
-    paddingBottom: 10,
-    backgroundColor: '#f7f5f2',
-  },
-  headerText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#000',
-    lineHeight: 40,
-  },
-  dealCard: {
-    marginHorizontal: 15,
-    marginBottom: 20,
-    borderRadius: 15,
-    overflow: 'hidden',
-    width: productCardWidth,
+    color: '#333',
+    marginBottom: 15,
   },
   dealsScrollContainer: {
-    paddingLeft: 15,
-    paddingRight: 15,
+    paddingRight: 20,
+    paddingBottom: 10,
+  },
+  dealCard: {
+    width: productCardWidth,
+    marginRight: 15,
+    borderRadius: 15,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   discountBadge: {
     position: 'absolute',
     left: 0,
-    top: 20,
-    backgroundColor: '#8BC34A',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderTopRightRadius: 20,
-    borderBottomRightRadius: 20,
+    top: 15,
+    backgroundColor: '#10B981',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
     zIndex: 2,
   },
   discountText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   bookmarkButton: {
     position: 'absolute',
-    right: 15,
-    top: 15,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    right: 10,
+    top: 10,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 8,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
   },
   dealImage: {
-    height: 300,
-    backgroundColor: '#fff',
+    height: 180,
+    backgroundColor: '#f8f9fa',
   },
   dealContent: {
     padding: 15,
   },
-  dealName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  dealDescription: {
-    fontSize: 14,
-    color: '#555',
-    lineHeight: 20,
-    marginBottom: 15,
-  },
-  recommendRow: {
-    marginVertical: 10,
-  },
-  recommendText: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 8,
-  },
-  recommendBadges: {
-    flexDirection: 'row',
-  },
-  recommendBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 5,
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  recommendIcon: {
-    width: 25,
-    height: 25,
-    borderRadius: 12.5,
-  },
-  moreBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 15,
-  },
   storeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
   storeIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 6,
   },
   storeName: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#666',
   },
-  priceContainer: {
+  dealName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 6,
+  },
+  dealDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+    lineHeight: 20,
+  },
+  priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   originalPrice: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#888',
     textDecorationLine: 'line-through',
     marginRight: 8,
   },
   discountedPrice: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  categoryText: {
-    fontSize: 16,
-    fontWeight: '500',
+    color: '#F59E0B',
   },
   loadingContainer: {
-    height: 300,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1030,22 +1157,22 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   errorContainer: {
-    padding: 20,
+    padding: 10,
     alignItems: 'center',
   },
   errorText: {
-    color: '#ff6b6b',
-    marginBottom: 15,
+    color: '#ef4444',
+    marginBottom: 10,
     textAlign: 'center',
   },
   retryButton: {
-    backgroundColor: '#FFC107',
-    paddingVertical: 10,
+    backgroundColor: '#6366F1',
+    paddingVertical: 8,
     paddingHorizontal: 20,
-    borderRadius: 20,
+    borderRadius: 8,
   },
   retryButtonText: {
-    color: '#333',
+    color: '#fff',
     fontWeight: 'bold',
   },
   modalContainer: {
@@ -1060,6 +1187,18 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '90%',
     maxHeight: '80%',
+    position: 'relative',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: '#f2f3f5',
+    borderRadius: 20,
+    width: 34,
+    height: 34,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   modalImage: {
@@ -1067,46 +1206,73 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 10,
     marginBottom: 15,
+    backgroundColor: '#f8f9fa',
   },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  modalBookmarkButton: {
+    position: 'absolute',
+    top: 165,
+    right: 15,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  modalStoreRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 10,
+  },
+  modalStoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalStoreIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  modalStoreName: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
   },
   modalPrice: {
     fontSize: 20,
-    color: '#006156',
     fontWeight: 'bold',
+    color: '#F59E0B',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 10,
   },
   modalDescription: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#666',
-    textAlign: 'center',
     marginBottom: 20,
+    lineHeight: 22,
   },
   visitButton: {
-    backgroundColor: '#006156',
+    backgroundColor: '#6366F1',
     paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    marginBottom: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   visitButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: '#999',
-  },
-  closeButtonText: {
-    color: '#999',
     fontSize: 16,
     fontWeight: 'bold',
   },
