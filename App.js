@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react'; 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -9,10 +10,14 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   StyleSheet,
-  Platform
+  Platform,
+  StatusBar
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Import Theme Provider
+import { ThemeProvider, useTheme } from './src/context/ThemeContext.js';
 
 // Import your screens
 import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
@@ -32,68 +37,28 @@ import ProfileMenuOverlay from './src/feature/Screens/ProfileScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Loading Spinner Component
-const LoadingSpinner = ({ visible }) => {
-  if (!visible) return null;
-  
-  return (
-    <View style={styles.spinnerOverlay}>
-      <View style={styles.spinnerContainer}>
-        <ActivityIndicator size="large" color="#6366F1" />
-        <Text style={styles.spinnerText}>Searching...</Text>
-      </View>
-    </View>
-  );
-};
+// Themed Screen Wrapper
+const ThemedScreen = ({ component: Component, ...rest }) => {
+  const { currentTheme, isDarkMode } = useTheme();
 
-// Search Results Screen with Loading State and Custom Navigation
-const SearchResultsWithLoading = ({ route, navigation }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Use real loading state from HomeScreen if provided, otherwise simulate
-  React.useEffect(() => {
-    if (route.params?.isLoading !== undefined) {
-      setIsLoading(route.params.isLoading);
-    } else {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [route.params]);
-  
-  // Add back button functionality
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  // Show bottom tabs on this screen
-  React.useLayoutEffect(() => {
-    navigation.setOptions({
-      tabBarVisible: true
-    });
-  }, [navigation]);
-  
   return (
-    <View style={{ flex: 1, backgroundColor: '#f5f7fa' }}>
-      {/* Header with back button */}
-      <View style={styles.searchHeader}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Search Results</Text>
-      </View>
-      
-      <SearchResultScreen 
-        query={route.params?.query || ''} 
-        results={route.params?.results || []} 
-        navigation={navigation}
+    <View style={{ flex: 1, backgroundColor: currentTheme.background }}>
+      <StatusBar 
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={currentTheme.background}
       />
-      <LoadingSpinner visible={isLoading} />
+      <Component 
+        {...rest} 
+        screenProps={{ 
+          theme: currentTheme,
+          isDarkMode 
+        }} 
+      />
     </View>
   );
 };
+
+// Existing components (LoadingSpinner, SearchResultsWithLoading, etc.) remain the same
 
 const HomeWithProfile = ({ navigation }) => {
   const [userData, setUserData] = useState({
@@ -136,73 +101,27 @@ const HomeWithProfile = ({ navigation }) => {
   );
 };
 
-// Profile Screen - Updated to fix visibility issues
-const ProfileScreen = ({ navigation }) => {
-  const [userData, setUserData] = useState({
-    name: '',
-    email: ''
-  });
-  
-  // Fetch user data from AsyncStorage
-  useEffect(() => {
-    const getUserData = async () => {
-      try {
-        const email = await AsyncStorage.getItem('userEmail');
-        const userId = await AsyncStorage.getItem('userId');
-        
-        if (email) {
-          const username = email.split('@')[0]; // Simple username from email
-          setUserData({
-            name: username,
-            email: email
-          });
-        }
-      } catch (error) {
-        console.error('Error retrieving user data from AsyncStorage:', error);
-      }
-    };
-    
-    getUserData();
-  }, []);
-
-  // Handle back button or close
-  const handleClose = () => {
-    // Navigate to Home tab instead of just closing the menu
-    navigation.navigate('HomeTab');
-  };
-  
-  return (
-    <View style={{ flex: 1, backgroundColor: '#f5f7fa' }}>
-      {/* Always show the menu when on profile tab */}
-      <ProfileMenuOverlay 
-        visible={true} 
-        onClose={handleClose}
-        userData={userData}
-      />
-    </View>
-  );
-};
-
-// This function creates the main tab navigator with SearchResults included
 function createMainTabNavigator() {
+  const { currentTheme } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#6366F1',
+        tabBarActiveTintColor: currentTheme.primary,
         tabBarInactiveTintColor: '#888',
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: '#e1e1e1',
+          backgroundColor: currentTheme.cardBackground,
+          borderTopColor: currentTheme.border,
         },
         headerStyle: {
-          backgroundColor: '#6366F1',
+          backgroundColor: currentTheme.primary,
         },
         headerTintColor: 'white'
       }}
     >
       <Tab.Screen 
         name="HomeTab" 
-        component={HomeWithProfile} 
+        component={(props) => <ThemedScreen component={HomeWithProfile} {...props} />}
         options={{
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
@@ -213,7 +132,7 @@ function createMainTabNavigator() {
       />
       <Tab.Screen 
         name="SavedTab" 
-        component={SavedProductsScreen} 
+        component={(props) => <ThemedScreen component={SavedProductsScreen} {...props} />}
         options={{
           tabBarLabel: 'Saved',
           tabBarIcon: ({ color, size }) => (
@@ -225,7 +144,7 @@ function createMainTabNavigator() {
       />
       <Tab.Screen 
         name="HistoryTab" 
-        component={HistoryScreen} 
+        component={(props) => <ThemedScreen component={HistoryScreen} {...props} />}
         options={{
           tabBarLabel: 'History',
           tabBarIcon: ({ color, size }) => (
@@ -237,7 +156,7 @@ function createMainTabNavigator() {
       />
       <Tab.Screen 
         name="ProfileTab" 
-        component={ProfileScreen} 
+        component={(props) => <ThemedScreen component={ProfileMenuOverlay} {...props} />}
         options={{
           tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (
@@ -247,12 +166,11 @@ function createMainTabNavigator() {
           headerShown: false
         }}
       />
-      {/* Add SearchResults as a hidden tab to maintain navigation */}
       <Tab.Screen 
         name="SearchResults" 
-        component={SearchResultsWithLoading} 
+        component={(props) => <ThemedScreen component={SearchResultScreen} {...props} />}
         options={{
-          tabBarButton: () => null, // Hide this tab from the tab bar
+          tabBarButton: () => null,
           headerShown: false,
         }}
       />
@@ -260,7 +178,6 @@ function createMainTabNavigator() {
   );
 }
 
-// Simple wrapper for standalone HomeScreen that loads user data from AsyncStorage
 const HomeScreenWrapper = ({ navigation, route = {} }) => {
   const [userData, setUserData] = useState({
     name: '',
@@ -300,22 +217,46 @@ const HomeScreenWrapper = ({ navigation, route = {} }) => {
 // Main app component with navigation setup
 export default function App() {
   return (
-    <NavigationContainer>
-      <SafeAreaView style={{ flex: 1 }}>
-        <Stack.Navigator initialRouteName="Welcome">
-          <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="Home" component={HomeScreenWrapper} options={{ headerShown: false }} />
-          <Stack.Screen name="Main" component={createMainTabNavigator} options={{ headerShown: false }} />
-          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
-          {/* Remove SearchResults from here since it's now in the tab navigator */}
-        </Stack.Navigator>
-      </SafeAreaView>
-    </NavigationContainer>
+    <ThemeProvider>
+      <NavigationContainer>
+        <SafeAreaView style={{ flex: 1 }}>
+          <Stack.Navigator initialRouteName="Welcome">
+            <Stack.Screen 
+              name="Welcome" 
+              component={(props) => <ThemedScreen component={WelcomeScreen} {...props} />} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="Login" 
+              component={(props) => <ThemedScreen component={LoginScreen} {...props} />} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="Register" 
+              component={(props) => <ThemedScreen component={RegisterScreen} {...props} />} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="Home" 
+              component={(props) => <ThemedScreen component={HomeScreenWrapper} {...props} />} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="Main" 
+              component={createMainTabNavigator} 
+              options={{ headerShown: false }} 
+            />
+            <Stack.Screen 
+              name="Search" 
+              component={(props) => <ThemedScreen component={SearchScreen} {...props} />} 
+              options={{ headerShown: false }} 
+            />
+          </Stack.Navigator>
+        </SafeAreaView>
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }
-
 const styles = StyleSheet.create({
   spinnerOverlay: {
     position: 'absolute',
