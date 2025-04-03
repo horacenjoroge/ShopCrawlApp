@@ -18,7 +18,6 @@ import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
 import LoginScreen from './src/feature/Screens/LoginScreen';
 import HomeScreen from './src/feature/Screens/HomeScreen.jsx';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
-import SearchScreen from './src/feature/Screens/SearchScreen';
 import HistoryScreen from './src/feature/Screens/HistoryScreen';
 import ComparisonScreen from './src/feature/Screens/ComparisonScreen';
 
@@ -279,7 +278,6 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Home" component={MainTabs} options={{ headerShown: false }} />
-          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ComparisonScreen" component={ComparisonScreen} />
           <Stack.Screen 
             name="SearchResults" 
