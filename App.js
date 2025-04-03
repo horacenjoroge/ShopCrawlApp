@@ -95,9 +95,7 @@ const SearchResultsWithLoading = ({ route, navigation }) => {
   );
 };
 
-// Home Screen with Profile Menu Overlay - Updated to use AsyncStorage
 const HomeWithProfile = ({ navigation }) => {
-  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [userData, setUserData] = useState({
     name: '',
     email: ''
@@ -108,10 +106,9 @@ const HomeWithProfile = ({ navigation }) => {
     const getUserData = async () => {
       try {
         const email = await AsyncStorage.getItem('userEmail');
-        const userId = await AsyncStorage.getItem('userId');
         
         if (email) {
-          const username = email.split('@')[0]; // Simple username from email
+          const username = email.split('@')[0];
           setUserData({
             name: username,
             email: email
@@ -126,24 +123,16 @@ const HomeWithProfile = ({ navigation }) => {
   }, []);
   
   const handleSearch = (query) => {
-    // Navigate to search results within the Main tab navigator to keep bottom tabs
     navigation.navigate('SearchResults', { query });
   };
   
   return (
-    <View style={{ flex: 1 }}>
-      <HomeScreen 
-        navigation={navigation} 
-        onProfilePress={() => setProfileMenuVisible(true)}
-        onSearch={handleSearch}
-        userData={userData}
-      />
-      <ProfileMenuOverlay 
-        visible={profileMenuVisible} 
-        onClose={() => setProfileMenuVisible(false)}
-        userData={userData}
-      />
-    </View>
+    <HomeScreen 
+      navigation={navigation} 
+      onProfilePress={() => navigation.navigate('ProfileTab')}
+      onSearch={handleSearch}
+      userData={userData}
+    />
   );
 };
 

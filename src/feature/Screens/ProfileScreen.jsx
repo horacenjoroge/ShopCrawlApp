@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,203 +6,289 @@ import {
   TouchableOpacity, 
   Modal,
   Pressable,
+  Alert,
   SafeAreaView
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const ProfileMenuOverlay = ({ visible, onClose, userData }) => {
-  // Theme options
-  const [theme, setTheme] = useState('light'); // Changed default to light
-  
+const ProfileScreen = ({ navigation }) => {
+  // User state
+  const [userData, setUserData] = useState({
+    name: '',
+    email: '',
+    userId: null
+  });
+
+  // Theme state
+  const [theme, setTheme] = useState('light');
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const email = await AsyncStorage.getItem('userEmail');
+        const userId = await AsyncStorage.getItem('userId');
+        
+        if (email) {
+          const username = email.split('@')[0];
+          setUserData({
+            name: username,
+            email: email,
+            userId: userId
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Theme change handler
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
-    // In a real app, you would apply the theme change throughout the app
+    // TODO: Implement app-wide theme change logic
   };
 
-  // If not visible, don't render anything
-  if (!visible) return null;
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      // Clear AsyncStorage
+      await AsyncStorage.removeItem('userEmail');
+      await AsyncStorage.removeItem('userId');
+      await AsyncStorage.removeItem('userToken');
+
+      // Navigate to Welcome screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Welcome' }]
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Logout Failed', 'Unable to log out. Please try again.');
+    }
+  };
+
+  // Delete account handler
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // TODO: Call backend API to delete account
+              // For now, just clear local storage and navigate
+              await AsyncStorage.clear();
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }]
+              });
+            } catch (error) {
+              console.error('Account deletion error:', error);
+              Alert.alert('Delete Failed', 'Unable to delete account. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // Open external link handler (placeholder)
+  const openExternalLink = (type) => {
+    // TODO: Implement actual link opening
+    Alert.alert('Coming Soon', `${type} will be available soon.`);
+  };
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.modalBackground} onPress={onClose}>
-        {/* Stop propagation for the menu itself */}
-        <Pressable style={styles.menuContainer} onPress={(e) => e.stopPropagation()}>
-          
-          {/* User info section */}
-          <View style={styles.userInfoSection}>
-            <Text style={styles.userName}>{userData?.name || 'Guest User'}</Text>
-            <Text style={styles.userEmail}>{userData?.email || 'user@example.com'}</Text>
+    <SafeAreaView style={styles.container}>
+      {/* User Info Header */}
+      <View style={styles.headerContainer}>
+        <View style={styles.avatarContainer}>
+          <Icon name="account-circle" size={80} color="#6366F1" />
+        </View>
+        <Text style={styles.userName}>{userData.name || 'Guest User'}</Text>
+        <Text style={styles.userEmail}>{userData.email || 'user@example.com'}</Text>
+      </View>
+
+      {/* Profile Menu Sections */}
+      <View style={styles.menuSection}>
+        {/* Theme Selection */}
+        <View style={styles.menuSubSection}>
+          <Text style={styles.sectionTitle}>Theme</Text>
+          <View style={styles.themeContainer}>
+            {['Auto', 'Light', 'Dark'].map((themeOption) => (
+              <TouchableOpacity 
+                key={themeOption}
+                style={[
+                  styles.themeButton, 
+                  theme.toLowerCase() === themeOption.toLowerCase() && styles.selectedTheme
+                ]}
+                onPress={() => handleThemeChange(themeOption.toLowerCase())}
+              >
+                <Text style={styles.themeButtonText}>{themeOption}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-          
-          {/* Theme selection */}
-          <View style={styles.themeSelectionContainer}>
-            <TouchableOpacity 
-              style={[styles.themeOption, theme === 'auto' && styles.selectedTheme]} 
-              onPress={() => handleThemeChange('auto')}
-            >
-              <Text style={styles.themeIcon}>⚫</Text>
-              <Text style={styles.optionText}>Auto</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.themeOption, theme === 'light' && styles.selectedTheme]} 
-              onPress={() => handleThemeChange('light')}
-            >
-              <Text style={styles.themeIcon}>☀️</Text>
-              <Text style={styles.optionText}>Light</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.themeOption, theme === 'dark' && styles.selectedTheme]} 
-              onPress={() => handleThemeChange('dark')}
-            >
-              <Text style={styles.themeIcon}>🌙</Text>
-              <Text style={styles.optionText}>Dark</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {/* Location */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🌐</Text>
-            <Text style={styles.menuText}>Location: United States</Text>
-            <Text style={styles.chevron}>›</Text>
+        </View>
+
+        {/* Account Actions */}
+        <View style={styles.menuSubSection}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => openExternalLink('Privacy Policy')}
+          >
+            <Icon name="privacy-tip" size={24} color="#6366F1" />
+            <Text style={styles.menuItemText}>Privacy Policy</Text>
           </TouchableOpacity>
-          
-          {/* Divider */}
-          <View style={styles.divider} />
-          
-          {/* Privacy Policy */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🛡️</Text>
-            <Text style={styles.menuText}>Privacy Policy</Text>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => openExternalLink('Terms of Service')}
+          >
+            <Icon name="description" size={24} color="#6366F1" />
+            <Text style={styles.menuItemText}>Terms of Service</Text>
           </TouchableOpacity>
-          
-          {/* Terms */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>📄</Text>
-            <Text style={styles.menuText}>Terms</Text>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => openExternalLink('Send Feedback')}
+          >
+            <Icon name="feedback" size={24} color="#6366F1" />
+            <Text style={styles.menuItemText}>Send Feedback</Text>
           </TouchableOpacity>
-          
-          {/* Send Feedback */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>✉️</Text>
-            <Text style={styles.menuText}>Send Feedback</Text>
+        </View>
+
+        {/* Dangerous Actions */}
+        <View style={styles.menuSubSection}>
+          <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <TouchableOpacity 
+            style={[styles.menuItem, styles.dangerItem]}
+            onPress={handleDeleteAccount}
+          >
+            <Icon name="delete-forever" size={24} color="#FF0000" />
+            <Text style={[styles.menuItemText, styles.dangerText]}>Delete Account</Text>
           </TouchableOpacity>
-          
-          {/* Delete Account */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🗑️</Text>
-            <Text style={styles.menuText}>Delete Account</Text>
-          </TouchableOpacity>
-          
-          {/* Divider */}
-          <View style={styles.divider} />
-          
-          {/* Log Out */}
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>🚪</Text>
-            <Text style={styles.menuText}>Log Out</Text>
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
+        </View>
+
+        {/* Logout */}
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <Icon name="logout" size={24} color="#ffffff" />
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  modalBackground: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
+    backgroundColor: '#f4f4f4',
   },
-  menuContainer: {
-    width: '90%',
-    alignSelf: 'center',
-    marginTop: 80,
-    backgroundColor: '#ffffff', // Changed to white
-    borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 10,
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    paddingVertical: 30,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e1e1',
   },
-  userInfoSection: {
-    padding: 16,
-    paddingBottom: 20,
-    backgroundColor: '#6366F1', // Changed to purple like home screen
+  avatarContainer: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 60,
+    padding: 10,
+    marginBottom: 15,
   },
   userName: {
-    color: 'white', // Kept white for contrast on purple
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 4,
+    color: '#333',
+    marginBottom: 5,
   },
   userEmail: {
-    color: 'white', // Kept white for contrast on purple
     fontSize: 16,
-    opacity: 0.9,
+    color: '#666',
   },
-  themeSelectionContainer: {
+  menuSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  menuSubSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    marginBottom: 20,
+    padding: 15,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  themeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e1e1e1', // Lighter border
   },
-  themeOption: {
+  themeButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 10,
-    marginHorizontal: 4,
-    borderRadius: 20,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    marginHorizontal: 5,
+    backgroundColor: '#f4f4f4',
+    alignItems: 'center',
   },
   selectedTheme: {
-    backgroundColor: '#e1e3f5', // Light purple background
+    backgroundColor: '#6366F1',
   },
-  themeIcon: {
-    marginRight: 8,
-    fontSize: 16,
-  },
-  optionText: {
-    color: '#333333', // Dark text
-    fontSize: 15,
+  themeButtonText: {
+    color: '#333',
+    fontWeight: '500',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
-  menuIcon: {
-    marginRight: 16,
-    width: 24,
-    textAlign: 'center',
-    fontSize: 18,
-  },
-  menuText: {
-    color: '#333333', // Dark text
+  menuItemText: {
+    marginLeft: 15,
     fontSize: 16,
-    flex: 1,
+    color: '#333',
   },
-  chevron: {
-    color: '#666666', // Darker gray
-    fontSize: 20,
+  dangerItem: {
+    marginTop: 10,
+  },
+  dangerText: {
+    color: '#FF0000',
     fontWeight: 'bold',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#e1e1e1', // Lighter divider
+  logoutButton: {
+    backgroundColor: '#6366F1',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
 });
 
-export default ProfileMenuOverlay;
+export default ProfileScreen;
