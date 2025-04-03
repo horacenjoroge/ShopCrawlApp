@@ -19,8 +19,10 @@ import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
 import LoginScreen from './src/feature/Screens/LoginScreen';
 import HomeScreen from './src/feature/Screens/HomeScreen.jsx';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
+
 import SearchScreen from './src/feature/Screens/SearchScreen';
 import HistoryScreen from './src/feature/Screens/HistoryScreen';
+import SavedProductsScreen from './src/feature/Screens/SavedScreen';
 
 // Import other components/screens
 import SearchResultScreen from './src/feature/Screens/SearchResult';
@@ -137,15 +139,6 @@ const HomeWithProfile = ({ navigation }) => {
   );
 };
 
-// Saved Screen
-const SavedScreen = () => {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }}>
-      <Text style={{ color: 'white', fontSize: 18 }}>Saved Items</Text>
-    </View>
-  );
-};
-
 // Profile Screen - Updated to use AsyncStorage
 const ProfileScreen = () => {
   const [profileMenuVisible, setProfileMenuVisible] = useState(true);
@@ -217,13 +210,14 @@ function MainTabs() {
       />
       <Tab.Screen 
         name="SavedTab" 
-        component={SavedScreen} 
+        component={SavedProductsScreen} 
         options={{
           tabBarLabel: 'Saved',
           tabBarIcon: ({ color, size }) => (
             <Icon name="bookmark" color={color} size={size} />
           ),
-          title: 'Saved Items'
+          title: 'Saved Products',
+          headerShown: false
         }}
       />
       <Tab.Screen 

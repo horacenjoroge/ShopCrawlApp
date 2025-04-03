@@ -18,7 +18,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // SERP API key
-const SERP_API_KEY = '7adf35f97c008c6ddce7921ee949027b7b8b34fd4fa969bd54d613a413093dc1';
+const SERP_API_KEY = 'f5f86e39c42a05dcb61c807ec5782b89eb3149cdf168e103c7e7f8889b87cb18';
 
 // Amazon API configuration (as backup)
 const AMAZON_API_CONFIG = {
@@ -37,6 +37,9 @@ const DEFAULT_SEARCH_TERMS = [
   'Popular laptops'
 ];
 
+// API Base URL
+const API_BASE_URL = 'http://192.168.100.54:3000/api';
+
 const SearchResultScreen = ({ query = '', results = [], navigation }) => {
   const [searchQuery, setSearchQuery] = useState(query);
   const [products, setProducts] = useState([]);
@@ -48,20 +51,62 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
   const [savedProducts, setSavedProducts] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
 
-  // Load saved products from AsyncStorage
-  useEffect(() => {
-    const loadSavedProducts = async () => {
+  // Load saved products from backend API
+  const loadSavedProductsFromAPI = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        console.log('No token found, skipping API load');
+        return;
+      }
+      
+      console.log('Fetching saved products from:', `${API_BASE_URL}/products/saved`);
+      
+      const response = await axios.get(
+        `${API_BASE_URL}/products/saved`,
+        { headers: { 'x-auth-token': token } }
+      );
+      
+      console.log('API response for saved products:', response.data);
+      
+      if (response.data && Array.isArray(response.data)) {
+        // Transform the API response to match the format expected by the app
+        const transformedProducts = response.data.map(item => ({
+          id: item.productId,
+          title: item.name,
+          price: item.price,
+          image: item.image,
+          store: item.store,
+          specs: item.description,
+          product_link: item.productUrl,
+          category: item.category
+        }));
+        
+        console.log('Transformed products:', transformedProducts.length);
+        
+        // Update the local state and storage with the server data
+        setSavedProducts(transformedProducts);
+        await AsyncStorage.setItem('savedProducts', JSON.stringify(transformedProducts));
+      }
+    } catch (err) {
+      console.error('Error loading saved products from API:', err);
+      // Fall back to local storage if API fails
       try {
         const saved = await AsyncStorage.getItem('savedProducts');
         if (saved) {
-          setSavedProducts(JSON.parse(saved));
+          const parsedSaved = JSON.parse(saved);
+          console.log('Falling back to local storage:', parsedSaved.length, 'items');
+          setSavedProducts(parsedSaved);
         }
-      } catch (error) {
-        console.error('Error loading saved products:', error);
+      } catch (localErr) {
+        console.error('Error loading from local storage:', localErr);
       }
-    };
-    
-    loadSavedProducts();
+    }
+  };
+
+  // Load initial data
+  useEffect(() => {
+    loadSavedProductsFromAPI();
     fetchFeaturedProducts();
   }, []);
 
@@ -97,31 +142,84 @@ const SearchResultScreen = ({ query = '', results = [], navigation }) => {
   // Save or remove a product
   const handleSaveProduct = async (product) => {
     try {
-      // Get existing saved products from AsyncStorage
+      // First get the auth token
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        console.log('No auth token found, please log in to save products');
+        // You could show a login prompt here
+        return;
+      }
+      
+      // Format product data consistently for the API
+      const productData = {
+        productId: product.id,
+        productData: {
+          name: product.title || product.name, // SearchResultScreen uses 'title' instead of 'name'
+          price: product.price,
+          image: product.image,
+          store: product.store || 'Unknown Store',
+          description: product.specs || product.description || 'No description available',
+          productUrl: product.product_link || product.productUrl,
+          category: product.category || 'Uncategorized'
+        }
+      };
+      
+      console.log('Sending save request to:', `${API_BASE_URL}/products/save`);
+      console.log('Product data:', productData);
+      
+      // Make API call to save/unsave the product
+      const response = await axios.post(
+        `${API_BASE_URL}/products/save`, 
+        productData,
+        { headers: { 'x-auth-token': token } }
+      );
+      
+      console.log('Save response:', response.data);
+      
+      // Also update local state for immediate UI feedback
       const savedProductsJson = await AsyncStorage.getItem('savedProducts');
       let savedProductsList = savedProductsJson ? JSON.parse(savedProductsJson) : [];
       
-      // Check if product is already saved
-      const isAlreadySaved = savedProductsList.some(item => item.id === product.id);
-      
-      if (isAlreadySaved) {
-        // Remove from saved products
-        savedProductsList = savedProductsList.filter(item => item.id !== product.id);
+      if (response.data.saved) {
+        // Product was saved
+        if (!savedProductsList.some(item => item.id === product.id)) {
+          savedProductsList.push(product);
+        }
       } else {
-        // Add to saved products
-        savedProductsList.push(product);
+        // Product was unsaved/removed
+        savedProductsList = savedProductsList.filter(item => item.id !== product.id);
       }
       
-      // Save back to AsyncStorage
+      // Update AsyncStorage and state
       await AsyncStorage.setItem('savedProducts', JSON.stringify(savedProductsList));
-      
-      // Update the saved products state
       setSavedProducts(savedProductsList);
       
-      // Show feedback to the user (could use a toast or snackbar)
-      console.log(isAlreadySaved ? 'Product removed from saved items' : 'Product saved');
     } catch (err) {
-      console.error('Error saving product:', err);
+      console.error('Error saving product to backend:', err);
+      
+      // If server call fails, at least save to local storage as fallback
+      try {
+        const savedProductsJson = await AsyncStorage.getItem('savedProducts');
+        let savedProductsList = savedProductsJson ? JSON.parse(savedProductsJson) : [];
+        const isAlreadySaved = savedProductsList.some(item => item.id === product.id);
+        
+        if (isAlreadySaved) {
+          savedProductsList = savedProductsList.filter(item => item.id !== product.id);
+        } else {
+          savedProductsList.push(product);
+        }
+        
+        // Update AsyncStorage and state
+        await AsyncStorage.setItem('savedProducts', JSON.stringify(savedProductsList));
+        setSavedProducts(savedProductsList);
+        
+        console.log(isAlreadySaved ? 
+          'Product removed from saved items (local only)' : 
+          'Product saved locally (API call failed)'
+        );
+      } catch (localErr) {
+        console.error('Error saving product locally:', localErr);
+      }
     }
   };
 
@@ -765,175 +863,175 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   productTitle: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  productSpecs: {
-    color: '#CCC',
-    fontSize: 14,
-    marginBottom: 12,
-    flex: 1,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  starContainer: {
-    flexDirection: 'row',
-    marginRight: 8,
-  },
-  reviewCount: {
-    color: '#999',
-    fontSize: 14,
-  },
-  loadingContainer: {
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    height: 400
-  },
-  loadingText: {
-    color: '#FFC107',
-    marginTop: 10,
-    fontSize: 16
-  },
-  bookmarkButton: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
-    backgroundColor: 'rgba(0,0,0,0.7)', // Darker background for better visibility
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10, // Ensure it's on top
-  },
-  modalScrollView: {
-    width: '100%',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.9)',
-  },
-  modalContent: {
-    width: '90%',
-    maxHeight: '90%',
-    backgroundColor: '#2A2A2A',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  closeModalButton: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  modalProductContainer: {
-    width: '100%',
-  },
-  modalProductImage: {
-    width: '100%',
-    height: 250,
-    backgroundColor: '#444',
-  },
-  modalBookmarkButton: {
-    position: 'absolute',
-    right: 20,
-    top: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)', // Improved visibility
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  modalProductDetails: {
-    padding: 20,
-  },
-  modalProductTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  modalPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  modalStoreName: {
-    color: '#FFC107',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalProductPrice: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  modalProductSpecs: {
-    color: '#CCC',
-    fontSize: 16,
-    marginBottom: 15,
-    lineHeight:  22,
-  },
-  modalRatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalReviewCount: {
-    color: '#999',
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  saveProductButton: {
-    backgroundColor: '#444',
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  saveProductText: {
-    color: '#FFC107',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  viewOnStoreButton: {
-    backgroundColor: '#FFC107',
-    paddingVertical: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  viewOnStoreText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalFallbackContainer: {
-    padding: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalFallbackText: {
-    fontSize: 16,
-    color: '#ccc',
-    marginTop: 15,
-    textAlign: 'center',
-  },
+   color: 'white',
+   fontSize: 16,
+   fontWeight: 'bold',
+   marginBottom: 8,
+ },
+ productSpecs: {
+   color: '#CCC',
+   fontSize: 14,
+   marginBottom: 12,
+   flex: 1,
+ },
+ ratingRow: {
+   flexDirection: 'row',
+   alignItems: 'center',
+ },
+ starContainer: {
+   flexDirection: 'row',
+   marginRight: 8,
+ },
+ reviewCount: {
+   color: '#999',
+   fontSize: 14,
+ },
+ loadingContainer: {
+   flex: 1, 
+   justifyContent: 'center', 
+   alignItems: 'center',
+   height: 400
+ },
+ loadingText: {
+   color: '#FFC107',
+   marginTop: 10,
+   fontSize: 16
+ },
+ bookmarkButton: {
+   position: 'absolute',
+   right: 15,
+   top: 15,
+   backgroundColor: 'rgba(0,0,0,0.7)', // Darker background for better visibility
+   borderRadius: 20,
+   width: 40,
+   height: 40,
+   justifyContent: 'center',
+   alignItems: 'center',
+   zIndex: 10, // Ensure it's on top
+ },
+ modalScrollView: {
+   width: '100%',
+ },
+ modalContainer: {
+   flex: 1,
+   justifyContent: 'center',
+   alignItems: 'center',
+   backgroundColor: 'rgba(0,0,0,0.9)',
+ },
+ modalContent: {
+   width: '90%',
+   maxHeight: '90%',
+   backgroundColor: '#2A2A2A',
+   borderRadius: 12,
+   overflow: 'hidden',
+ },
+ closeModalButton: {
+   position: 'absolute',
+   right: 15,
+   top: 15,
+   backgroundColor: 'rgba(0,0,0,0.5)',
+   borderRadius: 20,
+   width: 40,
+   height: 40,
+   justifyContent: 'center',
+   alignItems: 'center',
+   zIndex: 2,
+ },
+ modalProductContainer: {
+   width: '100%',
+ },
+ modalProductImage: {
+   width: '100%',
+   height: 250,
+   backgroundColor: '#444',
+ },
+ modalBookmarkButton: {
+   position: 'absolute',
+   right: 20,
+   top: 20,
+   backgroundColor: 'rgba(0,0,0,0.7)', // Improved visibility
+   borderRadius: 25,
+   width: 50,
+   height: 50,
+   justifyContent: 'center',
+   alignItems: 'center',
+   zIndex: 10,
+ },
+ modalProductDetails: {
+   padding: 20,
+ },
+ modalProductTitle: {
+   color: 'white',
+   fontSize: 20,
+   fontWeight: 'bold',
+   marginBottom: 10,
+ },
+ modalPriceRow: {
+   flexDirection: 'row',
+   justifyContent: 'space-between',
+   alignItems: 'center',
+   marginBottom: 15,
+ },
+ modalStoreName: {
+   color: '#FFC107',
+   fontSize: 16,
+   fontWeight: 'bold',
+ },
+ modalProductPrice: {
+   color: 'white',
+   fontSize: 20,
+   fontWeight: 'bold',
+ },
+ modalProductSpecs: {
+   color: '#CCC',
+   fontSize: 16,
+   marginBottom: 15,
+   lineHeight:  22,
+ },
+ modalRatingRow: {
+   flexDirection: 'row',
+   alignItems: 'center',
+   marginBottom: 20,
+ },
+ modalReviewCount: {
+   color: '#999',
+   fontSize: 14,
+   marginLeft: 8,
+ },
+ saveProductButton: {
+   backgroundColor: '#444',
+   paddingVertical: 12,
+   borderRadius: 25,
+   alignItems: 'center',
+   marginBottom: 10,
+ },
+ saveProductText: {
+   color: '#FFC107',
+   fontSize: 16,
+   fontWeight: 'bold',
+ },
+ viewOnStoreButton: {
+   backgroundColor: '#FFC107',
+   paddingVertical: 12,
+   borderRadius: 25,
+   alignItems: 'center',
+ },
+ viewOnStoreText: {
+   color: '#000',
+   fontSize: 16,
+   fontWeight: 'bold',
+ },
+ modalFallbackContainer: {
+   padding: 30,
+   alignItems: 'center',
+   justifyContent: 'center',
+ },
+ modalFallbackText: {
+   fontSize: 16,
+   color: '#ccc',
+   marginTop: 15,
+   textAlign: 'center',
+ },
 });
 
 export default SearchResultScreen;
