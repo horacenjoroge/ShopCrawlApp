@@ -4,8 +4,7 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  Modal,
-  Pressable,
+  ScrollView,
   Alert,
   SafeAreaView
 } from 'react-native';
@@ -111,75 +110,80 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* User Info Header */}
-      <View style={styles.headerContainer}>
-        <View style={styles.avatarContainer}>
-          <Icon name="account-circle" size={80} color="#6366F1" />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* User Info Header */}
+        <View style={styles.headerContainer}>
+          <View style={styles.avatarContainer}>
+            <Icon name="account-circle" size={100} color="#6366F1" />
+          </View>
+          <Text style={styles.userName}>{userData.name || 'Guest User'}</Text>
+          <Text style={styles.userEmail}>{userData.email || 'user@example.com'}</Text>
         </View>
-        <Text style={styles.userName}>{userData.name || 'Guest User'}</Text>
-        <Text style={styles.userEmail}>{userData.email || 'user@example.com'}</Text>
-      </View>
 
-      {/* Profile Menu Sections */}
-      <View style={styles.menuSection}>
-        {/* Theme Selection */}
-        <View style={styles.menuSubSection}>
-          <Text style={styles.sectionTitle}>Theme</Text>
-          <View style={styles.themeContainer}>
-            {['Auto', 'Light', 'Dark'].map((themeOption) => (
-              <TouchableOpacity 
-                key={themeOption}
-                style={[
-                  styles.themeButton, 
-                  theme.toLowerCase() === themeOption.toLowerCase() && styles.selectedTheme
-                ]}
-                onPress={() => handleThemeChange(themeOption.toLowerCase())}
-              >
-                <Text style={styles.themeButtonText}>{themeOption}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* Profile Menu Sections */}
+        <View style={styles.menuSection}>
+          {/* Theme Selection */}
+          <View style={styles.menuSubSection}>
+            <Text style={styles.sectionTitle}>Theme</Text>
+            <View style={styles.themeContainer}>
+              {['Auto', 'Light', 'Dark'].map((themeOption) => (
+                <TouchableOpacity 
+                  key={themeOption}
+                  style={[
+                    styles.themeButton, 
+                    theme.toLowerCase() === themeOption.toLowerCase() && styles.selectedTheme
+                  ]}
+                  onPress={() => handleThemeChange(themeOption.toLowerCase())}
+                >
+                  <Text style={styles.themeButtonText}>{themeOption}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Account Actions */}
+          <View style={styles.menuSubSection}>
+            <Text style={styles.sectionTitle}>Account</Text>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => openExternalLink('Privacy Policy')}
+            >
+              <Icon name="privacy-tip" size={24} color="#6366F1" />
+              <Text style={styles.menuItemText}>Privacy Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => openExternalLink('Terms of Service')}
+            >
+              <Icon name="description" size={24} color="#6366F1" />
+              <Text style={styles.menuItemText}>Terms of Service</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => openExternalLink('Send Feedback')}
+            >
+              <Icon name="feedback" size={24} color="#6366F1" />
+              <Text style={styles.menuItemText}>Send Feedback</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Dangerous Actions */}
+          <View style={styles.dangerSection}>
+            <Text style={styles.dangerSectionTitle}>Danger Zone</Text>
+            <TouchableOpacity 
+              style={styles.deleteButton}
+              onPress={handleDeleteAccount}
+            >
+              <Icon name="delete-forever" size={24} color="#ffffff" />
+              <Text style={styles.deleteButtonText}>Delete Account</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Account Actions */}
-        <View style={styles.menuSubSection}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => openExternalLink('Privacy Policy')}
-          >
-            <Icon name="privacy-tip" size={24} color="#6366F1" />
-            <Text style={styles.menuItemText}>Privacy Policy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => openExternalLink('Terms of Service')}
-          >
-            <Icon name="description" size={24} color="#6366F1" />
-            <Text style={styles.menuItemText}>Terms of Service</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => openExternalLink('Send Feedback')}
-          >
-            <Icon name="feedback" size={24} color="#6366F1" />
-            <Text style={styles.menuItemText}>Send Feedback</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Dangerous Actions */}
-        <View style={styles.menuSubSection}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <TouchableOpacity 
-            style={[styles.menuItem, styles.dangerItem]}
-            onPress={handleDeleteAccount}
-          >
-            <Icon name="delete-forever" size={24} color="#FF0000" />
-            <Text style={[styles.menuItemText, styles.dangerText]}>Delete Account</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Logout */}
+        {/* Logout Button */}
         <TouchableOpacity 
           style={styles.logoutButton}
           onPress={handleLogout}
@@ -187,7 +191,7 @@ const ProfileScreen = ({ navigation }) => {
           <Icon name="logout" size={24} color="#ffffff" />
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -196,6 +200,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f4f4f4',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 30,
   },
   headerContainer: {
     backgroundColor: '#ffffff',
@@ -206,8 +214,11 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     backgroundColor: '#f0f0f0',
-    borderRadius: 60,
-    padding: 10,
+    borderRadius: 75,
+    width: 150,
+    height: 150,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 15,
   },
   userName: {
@@ -268,14 +279,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-  dangerItem: {
-    marginTop: 10,
+  dangerSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
   },
-  dangerText: {
-    color: '#FF0000',
+  dangerSectionTitle: {
+    fontSize: 16,
     fontWeight: 'bold',
+    color: '#FF0000',
+    marginBottom: 15,
+  },
+  deleteButton: {
+    backgroundColor: '#FF0000',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderRadius: 10,
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   logoutButton: {
+    marginHorizontal: 20,
     backgroundColor: '#6366F1',
     flexDirection: 'row',
     justifyContent: 'center',
