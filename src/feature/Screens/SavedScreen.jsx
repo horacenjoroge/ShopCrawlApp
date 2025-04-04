@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 // API Base URL
-const API_BASE_URL = 'http://192.168.100.54:3000/api';
+const API_BASE_URL = 'https://4ff1-41-90-172-251.ngrok-free.app/api';
 
 const SavedProductsScreen = () => {
   const [savedProducts, setSavedProducts] = useState([]);

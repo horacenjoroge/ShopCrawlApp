@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react'; 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,38 +5,34 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { 
   SafeAreaView, 
   View, 
-  Text, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  StyleSheet,
-  Platform,
-  StatusBar
+  StatusBar, 
+  StyleSheet, 
+  Platform 
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Import Theme Provider
+// Theme and Context
 import { ThemeProvider, useTheme } from './src/context/ThemeContext.js';
 
-// Import your screens
+// Screens
 import WelcomeScreen from './src/feature/Screens/WelcomeScreen';
 import LoginScreen from './src/feature/Screens/LoginScreen';
 import HomeScreen from './src/feature/Screens/HomeScreen.jsx';
 import RegisterScreen from './src/feature/Screens/RegisterScreen';
-
 import SearchScreen from './src/feature/Screens/SearchScreen';
 import HistoryScreen from './src/feature/Screens/HistoryScreen';
 import SavedProductsScreen from './src/feature/Screens/SavedScreen';
-
-// Import other components/screens
 import SearchResultScreen from './src/feature/Screens/SearchResult';
 import ProfileMenuOverlay from './src/feature/Screens/ProfileScreen';
 
-// Create navigators
+// Custom Navbar
+import CustomNavbar from './src/context/CustomBottomNavbar.jsx'; // adjust this path if needed
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Themed Screen Wrapper
+// Themed wrapper
 const ThemedScreen = ({ component: Component, ...rest }) => {
   const { currentTheme, isDarkMode } = useTheme();
 
@@ -49,48 +44,34 @@ const ThemedScreen = ({ component: Component, ...rest }) => {
       />
       <Component 
         {...rest} 
-        screenProps={{ 
-          theme: currentTheme,
-          isDarkMode 
-        }} 
+        screenProps={{ theme: currentTheme, isDarkMode }} 
       />
     </View>
   );
 };
 
-// Existing components (LoadingSpinner, SearchResultsWithLoading, etc.) remain the same
-
 const HomeWithProfile = ({ navigation }) => {
-  const [userData, setUserData] = useState({
-    name: '',
-    email: ''
-  });
-  
-  // Fetch user data from AsyncStorage
+  const [userData, setUserData] = useState({ name: '', email: '' });
+
   useEffect(() => {
     const getUserData = async () => {
       try {
         const email = await AsyncStorage.getItem('userEmail');
-        
         if (email) {
           const username = email.split('@')[0];
-          setUserData({
-            name: username,
-            email: email
-          });
+          setUserData({ name: username, email });
         }
       } catch (error) {
         console.error('Error retrieving user data from AsyncStorage:', error);
       }
     };
-    
     getUserData();
   }, []);
-  
+
   const handleSearch = (query) => {
     navigation.navigate('SearchResults', { query });
   };
-  
+
   return (
     <HomeScreen 
       navigation={navigation} 
@@ -102,77 +83,21 @@ const HomeWithProfile = ({ navigation }) => {
 };
 
 function createMainTabNavigator() {
-  const { currentTheme } = useTheme();
-
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomNavbar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: currentTheme.primary,
-        tabBarInactiveTintColor: '#888',
-        tabBarStyle: {
-          backgroundColor: currentTheme.cardBackground,
-          borderTopColor: currentTheme.border,
-        },
-        headerStyle: {
-          backgroundColor: currentTheme.primary,
-        },
-        headerTintColor: 'white'
+        headerShown: false, // hide headers globally in tabs
       }}
     >
-      <Tab.Screen 
-        name="HomeTab" 
-        component={(props) => <ThemedScreen component={HomeWithProfile} {...props} />}
-        options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="home" color={color} size={size} />
-          ),
-          headerShown: false
-        }}
-      />
-      <Tab.Screen 
-        name="SavedTab" 
-        component={(props) => <ThemedScreen component={SavedProductsScreen} {...props} />}
-        options={{
-          tabBarLabel: 'Saved',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="bookmark" color={color} size={size} />
-          ),
-          title: 'Saved Products',
-          headerShown: false
-        }}
-      />
-      <Tab.Screen 
-        name="HistoryTab" 
-        component={(props) => <ThemedScreen component={HistoryScreen} {...props} />}
-        options={{
-          tabBarLabel: 'History',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="history" color={color} size={size} />
-          ),
-          title: 'Search History',
-          headerShown: false
-        }}
-      />
-      <Tab.Screen 
-        name="ProfileTab" 
-        component={(props) => <ThemedScreen component={ProfileMenuOverlay} {...props} />}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="person" color={color} size={size} />
-          ),
-          title: 'Profile',
-          headerShown: false
-        }}
-      />
+      <Tab.Screen name="HomeTab" component={HomeWithProfile} />
+      <Tab.Screen name="SavedTab" component={SavedProductsScreen} />
+      <Tab.Screen name="HistoryTab" component={HistoryScreen} />
+      <Tab.Screen name="ProfileTab" component={ProfileMenuOverlay} />
       <Tab.Screen 
         name="SearchResults" 
-        component={(props) => <ThemedScreen component={SearchResultScreen} {...props} />}
-        options={{
-          tabBarButton: () => null,
-          headerShown: false,
-        }}
+        component={SearchResultScreen} 
+        options={{ tabBarButton: () => null }} // hide from navbar
       />
     </Tab.Navigator>
   );
@@ -183,7 +108,7 @@ const HomeScreenWrapper = ({ navigation, route = {} }) => {
     name: '',
     email: route.params?.userEmail || ''
   });
-  
+
   useEffect(() => {
     if (!userData.email) {
       const getUserData = async () => {
@@ -191,20 +116,16 @@ const HomeScreenWrapper = ({ navigation, route = {} }) => {
           const email = await AsyncStorage.getItem('userEmail');
           if (email) {
             const username = email.split('@')[0];
-            setUserData({
-              name: username,
-              email: email
-            });
+            setUserData({ name: username, email });
           }
         } catch (error) {
           console.error('Error retrieving user data:', error);
         }
       };
-      
       getUserData();
     }
   }, [userData.email]);
-  
+
   return (
     <HomeScreen 
       navigation={navigation}
@@ -214,7 +135,6 @@ const HomeScreenWrapper = ({ navigation, route = {} }) => {
   );
 };
 
-// Main app component with navigation setup
 export default function App() {
   return (
     <ThemeProvider>
@@ -257,13 +177,11 @@ export default function App() {
     </ThemeProvider>
   );
 }
+
 const styles = StyleSheet.create({
   spinnerOverlay: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+    left: 0, right: 0, top: 0, bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -285,24 +203,5 @@ const styles = StyleSheet.create({
     color: '#333333',
     marginTop: 12,
     fontSize: 16,
-  },
-  searchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#6366F1',
-    paddingTop: Platform.OS === 'ios' ? 50 : 15,
-    paddingBottom: 15,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e1e1',
-  },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginLeft: 15,
   },
 });
