@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL for your backend API
-const API_BASE_URL = 'http://192.168.100.54:3000/api'; 
+const API_BASE_URL = ' https://4ff1-41-90-172-251.ngrok-free.app/api'; 
 
 // Create axios instance with default config
 const api = axios.create({
@@ -40,11 +40,13 @@ export const authService = {
       }
 
       const response = await api.post('/auth/register', userData);
+
+      console.log('UserID to store:', response.data.user._id);
       
       // Store token in AsyncStorage
       await AsyncStorage.setItem('userToken', response.data.token);
       await AsyncStorage.setItem('userEmail', userData.email);
-      await AsyncStorage.setItem('userId', response.data.user.id);
+      await AsyncStorage.setItem('userId', response.data.user._id);
       await AsyncStorage.setItem('username', userData.username);
       
       return response.data;
